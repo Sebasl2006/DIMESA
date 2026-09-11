@@ -15,11 +15,11 @@ import { ImageSlot } from "@/components/ImageSlot";
 // "imagen: null" muestra el placeholder genérico (nombre sobre fondo
 // oscuro) hasta que subas la foto real.
 const MARCA_META: Record<string, { nombre: string; imagen: string | null }> = {
-  botanique: { nombre: "Botaniqué", imagen: "/images/botanique-fondo.png" },
-  revlon: { nombre: "Revlon", imagen: "/images/revlon-fondo.png" },
-  mq_professional: { nombre: "M|Q Professional", imagen: "/images/mq-fondo.png" },
-  truss: { nombre: "TRUSS", imagen: "/images/truss-fondo.png" },
-  olaplex: { nombre: "Olaplex", imagen: "/images/olaplex-fondo.png" },
+  botanique: { nombre: "Botaniqué", imagen: "/images/botanique-fondo.webp" },
+  revlon: { nombre: "Revlon", imagen: "/images/revlon-fondo.webp" },
+  mq_professional: { nombre: "M|Q Professional", imagen: "/images/mq-fondo.webp" },
+  truss: { nombre: "TRUSS", imagen: "/images/truss-fondo.webp" },
+  olaplex: { nombre: "Olaplex", imagen: "/images/olaplex-fondo.webp" },
 };
 
 const ORDEN_MARCAS = Object.keys(MARCA_META);

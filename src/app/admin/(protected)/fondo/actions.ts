@@ -39,7 +39,7 @@ export async function actualizarFondo(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-// Vuelve al mármol de siempre (fondo-claro.png) — borra el fondo
+// Vuelve al mármol de siempre (fondo-claro.webp) — borra el fondo
 // personalizado de la base de datos.
 export async function restaurarFondoOriginal() {
   const supabase = await createClient();

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Informacion } from "@/lib/types";
 
-const FONDO_POR_DEFECTO = "/images/fondo-claro.png";
+const FONDO_POR_DEFECTO = "/images/fondo-claro.webp";
 
 interface FondoLayerProps {
   // Variante usada dentro de la sección "Información" del inicio (ver

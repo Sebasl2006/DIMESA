@@ -8,7 +8,7 @@ interface FondoFormProps {
   fondoActual: string | null;
 }
 
-const FONDO_POR_DEFECTO = "/images/fondo-claro.png";
+const FONDO_POR_DEFECTO = "/images/fondo-claro.webp";
 
 export function FondoForm({ fondoActual }: FondoFormProps) {
   const [submitting, setSubmitting] = useState(false);
