@@ -1,0 +1,216 @@
+:root {
+  --dimesa-bg: #0b0a09;
+  --dimesa-panel: #141210;
+  --dimesa-gold: #c9a876;
+  --dimesa-gold-hover: #e0c69a;
+  --dimesa-cream: #e6d3ac;
+  --dimesa-label: #8a7a5c;
+  --dimesa-muted: #8a8580;
+  --dimesa-placeholder: #6b6258;
+  --dimesa-border: rgba(201, 168, 118, 0.15);
+  --dimesa-border-strong: rgba(201, 168, 118, 0.25);
+  --dimesa-error: #c98a76;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--dimesa-bg);
+}
+
+body {
+  margin: 0;
+  background: var(--dimesa-bg);
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+a {
+  color: var(--dimesa-gold);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--dimesa-gold-hover);
+}
+
+input::placeholder {
+  color: var(--dimesa-placeholder);
+}
+
+.font-serif {
+  font-family: var(--font-cormorant), serif;
+}
+
+/* Selector de marca en /productos: cuadros que "se acercan" al pasar
+   el mouse (scale, no translateY) y se iluminan levemente. Mosaico a
+   pantalla completa (sin huecos), agrupado en filas — la cantidad de
+   filas y de cuadros por fila se calcula en page.tsx según cuántas
+   marcas hay (ver agruparEnFilas), así que con 4 sale 2+2 y con 5 sale
+   2 arriba (grandes) + 3 abajo (chicos), sin dejar la mitad de la
+   pantalla vacía ni tener que tocar CSS cuando se agregue otra marca. */
+.brand-selector {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 76px);
+  min-height: 560px;
+}
+
+.brand-row {
+  display: flex;
+  flex: 1;
+}
+
+.brand-card {
+  position: relative;
+  display: block;
+  overflow: visible;
+  cursor: pointer;
+  flex: 1;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 0.35s ease-out;
+}
+
+.brand-card:hover {
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+.brand-card-overlay {
+  transition: background-color 0.35s ease-out;
+}
+
+.brand-card:hover .brand-card-overlay {
+  background-color: rgba(11, 10, 9, 0.12) !important;
+}
+
+/* Tarjetas de /profesionales: mismo "levantarse" que los cuadros de
+   marca (scale, no translateY), y las credenciales se iluminan a la
+   vez. El hover está en toda la tarjeta (no solo la foto) para que al
+   bajar el cursor del retrato hacia el texto para leerlo no se apague
+   el efecto. */
+.profesional-foto {
+  transition: transform 0.35s ease-out;
+}
+
+.profesional-card:hover .profesional-foto {
+  transform: scale(1.08);
+  z-index: 10;
+}
+
+.profesional-ver-info {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.profesional-ver-info:hover {
+  background: #6b5228;
+  color: #f5efe2;
+}
+
+@media (max-width: 768px) {
+  .brand-selector {
+    height: auto;
+    min-height: 0;
+  }
+  .brand-row {
+    flex-direction: column;
+    flex: none;
+  }
+  .brand-card {
+    flex: 1 1 auto;
+    min-height: 50vh;
+  }
+}
+
+/* Tarjetas de producto en /productos/[marca]: mismo tipo de efecto que
+   los cuadros de marca (scale, no translateY) pero más sutil, ya que
+   son piezas más pequeñas del grid. */
+.product-card {
+  position: relative;
+  transform: scale(1);
+  transform-origin: center;
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0), 0 0 0 rgba(201, 168, 118, 0);
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.product-card:hover {
+  transform: scale(1.04);
+  z-index: 10;
+  /* Sombra de profundidad + un resplandor dorado bien notorio "detrás"
+     de la tarjeta (dos capas: un brillo cercano más intenso y uno amplio
+     y suave), para que se vea incluso sobre fotos de producto claras. */
+  box-shadow:
+    0 22px 55px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(224, 198, 154, 0.55),
+    0 0 80px rgba(201, 168, 118, 0.55);
+}
+
+/* El texto se ilumina junto con la tarjeta al hover, para que se lea
+   claro sin importar qué tan clara/oscura esté la zona del fondo detrás. */
+.product-card-name,
+.product-card-desc,
+.product-card-price {
+  transition: color 0.3s ease-out;
+}
+
+.product-card:hover .product-card-name {
+  color: #f5ead0 !important;
+}
+
+.product-card-desc {
+  color: #9a958c;
+}
+
+.product-card:hover .product-card-desc {
+  color: #d8d0c2 !important;
+}
+
+.product-card:hover .product-card-price {
+  color: #e6c896 !important;
+}
+
+.product-card-btn {
+  transition: background-color 0.25s ease-out;
+}
+
+.product-card:hover .product-card-btn {
+  background: #e0c69a !important;
+}
+
+/* Fondo decorativo (mismo mármol/hojas + realce de brillo del panel admin)
+   para Reservas, Productos, Profesionales y la sección Información. Capa
+   fija detrás de todo el contenido; el contenido va en su propio
+   contexto de apilamiento (position:relative + z-index) para quedar
+   siempre encima — sin eso el fondo tapa el contenido normal del flujo. */
+/* background-image NO va aquí a propósito — lo pone inline el componente
+   <FondoLayer /> (src/components/FondoLayer.tsx), que trae la imagen desde
+   la base de datos (editable en /admin/fondo, con esta misma imagen de
+   mármol como respaldo si el admin no ha subido una propia). */
+.dimesa-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-color: #f3ead9;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* Variante para la sección "Información": vive dentro de la página de
+   inicio (que ya tiene su propio video de fondo arriba), así que en vez
+   de fijarse a todo el viewport se limita a esta sección con position:absolute. */
+.dimesa-bg-layer-section {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-color: #f3ead9;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}

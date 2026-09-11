@@ -1,0 +1,77 @@
+.admin-link:hover {
+  color: #e0c69a !important;
+}
+.admin-btn-primary:hover {
+  background: #e0c69a !important;
+}
+.admin-btn-secondary:hover {
+  background: rgba(201, 168, 118, 0.08) !important;
+  border-color: rgba(201, 168, 118, 0.4) !important;
+}
+.admin-btn-danger:hover {
+  background: rgba(201, 138, 118, 0.1) !important;
+  border-color: rgba(201, 138, 118, 0.55) !important;
+}
+.admin-input:focus {
+  border-color: #c9a876 !important;
+}
+.admin-table tbody tr:hover {
+  background: rgba(201, 168, 118, 0.035);
+}
+.admin-sidebar-link:hover {
+  color: #e6d3ac !important;
+  background: rgba(201, 168, 118, 0.05);
+}
+.admin-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a876'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+/* En pantallas angostas el sidebar (232px fijos) no cabe junto al
+   contenido — se reduce a un riel de solo íconos en vez de desbordar. */
+@media (max-width: 640px) {
+  .admin-sidebar {
+    width: 60px !important;
+  }
+  .admin-sidebar-label {
+    display: none !important;
+  }
+  .admin-sidebar-link {
+    justify-content: center !important;
+    padding: 12px 0 !important;
+  }
+  .admin-sidebar-footer {
+    padding: 14px 8px 0 !important;
+    display: flex;
+    justify-content: center;
+  }
+  .admin-logout-btn {
+    padding: 8px !important;
+    font-size: 0 !important;
+    width: 34px;
+    height: 34px;
+  }
+  .admin-logout-btn::before {
+    content: "⏻";
+    font-size: 14px;
+  }
+}
+
+/* Fondo decorativo del panel: capa fija detrás de todo el contenido.
+   El filtro de brillo/saturación se aplica solo aquí, nunca al texto
+   ni a las tarjetas, que viven en su propio stacking context encima. */
+.admin-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-color: #0b0a09;
+  background-image: url("/images/admin-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  filter: brightness(1.7) saturate(1.25) contrast(1.05);
+  pointer-events: none;
+}
