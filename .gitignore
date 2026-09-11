@@ -28,3 +28,6 @@ next-env.d.ts
 
 # design export (source-of-truth kept outside the app bundle)
 /_design-export/
+
+# claude code local settings (machine-specific, not shared)
+.claude/settings.local.json
