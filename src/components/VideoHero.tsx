@@ -4,6 +4,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 interface VideoHeroProps {
   src: string;
+  // Imagen que se ve de inmediato mientras el video carga/decodifica —
+  // evita la pantalla negra en conexiones lentas. Opcional.
+  poster?: string;
   // Texto/contenido superpuesto sobre el video (título + descripción,
   // por ejemplo). Aparece de inmediato al cargar, con un fade-in propio
   // — a diferencia de "children", NO espera a que el video termine.
@@ -20,7 +23,7 @@ interface VideoHeroProps {
 // (autoplay, muted, sin loop) y al terminar revela el resto de la página
 // con un fade-in suave + scroll automático hacia el contenido. Mismo
 // patrón que el hero de video de la landing (/).
-export function VideoHero({ src, overlay, cornerLogo, children }: VideoHeroProps) {
+export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoHeroProps) {
   const [revealed, setRevealed] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(false);
   // Intentamos arrancar CON sonido — como se llega aquí haciendo clic en el
@@ -79,6 +82,7 @@ export function VideoHero({ src, overlay, cornerLogo, children }: VideoHeroProps
         <video
           ref={videoRef}
           src={src}
+          poster={poster}
           playsInline
           preload="auto"
           onEnded={reveal}

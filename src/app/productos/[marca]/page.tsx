@@ -24,6 +24,16 @@ const MARCA_VIDEO: Partial<Record<string, string>> = {
   mq_professional: "/videos/mq-hero.mp4",
 };
 
+// Imagen de portada de cada video — se ve de inmediato mientras el video
+// carga/decodifica, evitando la pantalla negra en conexiones lentas.
+const MARCA_VIDEO_POSTER: Partial<Record<string, string>> = {
+  botanique: "/images/botanique-hero-poster.jpg",
+  revlon: "/images/revlon-hero-poster.jpg",
+  olaplex: "/images/olaplex-hero-poster.jpg",
+  truss: "/images/truss-hero-poster.jpg",
+  mq_professional: "/images/mq-hero-poster.jpg",
+};
+
 // Texto superpuesto sobre el video (título + descripción de producto).
 // Opcional, igual que MARCA_VIDEO — solo tiene efecto si esa marca
 // también tiene video.
@@ -122,7 +132,7 @@ export default async function MarcaPage({ params }: { params: Promise<{ marca: s
 
   if (videoSrc) {
     return (
-      <VideoHero src={videoSrc} overlay={overlay} cornerLogo={cornerLogo}>
+      <VideoHero src={videoSrc} poster={MARCA_VIDEO_POSTER[marca]} overlay={overlay} cornerLogo={cornerLogo}>
         {content}
       </VideoHero>
     );

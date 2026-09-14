@@ -133,6 +133,7 @@ export function LandingClient() {
         <video
           ref={videoRef}
           src="/videos/dimesa-hero.mp4"
+          poster="/images/dimesa-hero-poster.jpg"
           playsInline
           preload="auto"
           onEnded={reveal}
