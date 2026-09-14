@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Profesional } from "@/lib/types";
 import * as s from "../../admin-styles";
@@ -82,9 +83,11 @@ export function ProfesionalForm({ profesional, action }: ProfesionalFormProps) {
 
       <label style={s.label}>Foto</label>
       {profesional?.foto_url && (
-        <img
+        <Image
           src={profesional.foto_url}
           alt={profesional.nombre}
+          width={84}
+          height={84}
           style={{ width: "84px", height: "84px", objectFit: "cover", borderRadius: "6px", border: "1px solid rgba(201,168,118,0.22)", marginBottom: "10px", display: "block" }}
         />
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import type { CuentaBancaria, Informacion } from "@/lib/types";
 import * as s from "../../admin-styles";
 
@@ -76,9 +77,11 @@ export function InformacionForm({ informacion, action }: InformacionFormProps) {
 
       <label style={s.label}>Foto del salón</label>
       {informacion.foto_url && (
-        <img
+        <Image
           src={informacion.foto_url}
           alt="Salón Dimesa"
+          width={160}
+          height={128}
           style={{ width: "160px", height: "128px", objectFit: "cover", borderRadius: "6px", border: "1px solid rgba(201,168,118,0.22)", marginBottom: "10px", display: "block" }}
         />
       )}

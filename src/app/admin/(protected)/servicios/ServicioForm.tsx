@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Servicio } from "@/lib/types";
 import * as s from "../../admin-styles";
@@ -57,9 +58,11 @@ export function ServicioForm({ servicio, action }: ServicioFormProps) {
 
       <label style={s.label}>Foto</label>
       {servicio?.imagen_url && (
-        <img
+        <Image
           src={servicio.imagen_url}
           alt={servicio.nombre}
+          width={84}
+          height={84}
           style={{ width: "84px", height: "84px", objectFit: "cover", borderRadius: "6px", border: "1px solid rgba(201,168,118,0.22)", marginBottom: "10px", display: "block" }}
         />
       )}
