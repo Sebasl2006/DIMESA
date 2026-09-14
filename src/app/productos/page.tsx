@@ -2,27 +2,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ImageSlot } from "@/components/ImageSlot";
 
-// "marca" es un enum controlado en la base de datos (check constraint en
-// productos_marca_check) y cada cuadro necesita una foto/nombre curados a
-// mano — eso no se puede generar solo. Por eso una marca nueva siempre
-// necesita: 1) agregarla al constraint (ALTER TABLE productos DROP/ADD
-// CONSTRAINT productos_marca_check ... CHECK (marca IN (...)) en Supabase),
-// 2) una entrada aquí, 3) la opción en el <select> del
-// admin (ProductoForm.tsx). Lo que SÍ es dinámico es CUÁLES de estas
-// tarjetas se muestran: solo las marcas que tienen al menos un producto
-// disponible salen en pantalla — si vacías o desactivas todos los
-// productos de una marca, su cuadro desaparece solo, sin tocar código.
-// "imagen: null" muestra el placeholder genérico (nombre sobre fondo
-// oscuro) hasta que subas la foto real.
-const MARCA_META: Record<string, { nombre: string; imagen: string | null }> = {
-  botanique: { nombre: "Botaniqué", imagen: "/images/botanique-fondo.webp" },
-  revlon: { nombre: "Revlon", imagen: "/images/revlon-fondo.webp" },
-  mq_professional: { nombre: "M|Q Professional", imagen: "/images/mq-fondo.webp" },
-  truss: { nombre: "TRUSS", imagen: "/images/truss-fondo.webp" },
-  olaplex: { nombre: "Olaplex", imagen: "/images/olaplex-fondo.webp" },
-};
-
-const ORDEN_MARCAS = Object.keys(MARCA_META);
+// Las marcas viven en la tabla "marcas" (nombre + foto de fondo del cuadro),
+// creadas desde el admin (Productos → Agregar producto → "+ Agregar marca
+// nueva") — no hace falta tocar código para agregar una. Acá solo se
+// decide CUÁLES de esas marcas se muestran: solo las que tienen al menos
+// un producto disponible salen en pantalla — si vacías o desactivas todos
+// los productos de una marca, su cuadro desaparece solo. Una marca sin
+// foto de fondo todavía muestra el placeholder genérico (nombre sobre
+// fondo oscuro) hasta que le subas una.
 
 // Agrupa N marcas en filas de máximo 3, dándole el resto a las últimas
 // filas — así 4 sale 2+2, 5 sale 2+3 (2 grandes arriba, 3 chicos abajo,
@@ -38,10 +25,14 @@ function agruparEnFilas(n: number): number[] {
 
 export default async function ProductosPage() {
   const supabase = await createClient();
-  const { data } = await supabase.from("productos").select("marca").eq("disponible", true);
+  const [{ data: productosData }, { data: marcasData }] = await Promise.all([
+    supabase.from("productos").select("marca").eq("disponible", true),
+    supabase.from("marcas").select("slug, nombre, imagen_url").order("created_at", { ascending: true }),
+  ]);
 
-  const marcasConStock = new Set((data ?? []).map((p) => p.marca as string));
-  const marcas = ORDEN_MARCAS.filter((slug) => marcasConStock.has(slug));
+  const marcasConStock = new Set((productosData ?? []).map((p) => p.marca as string));
+  const marcaMeta = new Map((marcasData ?? []).map((m) => [m.slug, m]));
+  const marcas = [...marcaMeta.keys()].filter((slug) => marcasConStock.has(slug));
 
   const filas: string[][] = [];
   let cursor = 0;
@@ -56,10 +47,10 @@ export default async function ProductosPage() {
         {filas.map((fila, i) => (
           <div key={i} className="brand-row">
             {fila.map((slug) => {
-              const m = MARCA_META[slug];
+              const m = marcaMeta.get(slug)!;
               return (
                 <Link key={slug} href={`/productos/${slug}`} className="brand-card">
-                  <ImageSlot src={m.imagen} alt={m.nombre} placeholder="" style={{ position: "absolute", inset: 0 }} />
+                  <ImageSlot src={m.imagen_url} alt={m.nombre} placeholder="" style={{ position: "absolute", inset: 0 }} />
                   <div
                     className="brand-card-overlay"
                     style={{ position: "absolute", inset: 0, background: "rgba(11,10,9,0.3)" }}

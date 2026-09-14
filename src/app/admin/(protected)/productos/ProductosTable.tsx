@@ -3,22 +3,15 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { Producto } from "@/lib/types";
+import type { MarcaInfo, Producto } from "@/lib/types";
 import { DeleteButton } from "../../DeleteButton";
 import { eliminarProducto } from "./actions";
 import * as s from "../../admin-styles";
 
-const MARCA_LABEL: Record<string, string> = {
-  botanique: "Botaniqué",
-  revlon: "Revlon",
-  mq_professional: "M|Q Professional",
-  truss: "TRUSS",
-  olaplex: "Olaplex",
-};
-
-export function ProductosTable({ productos }: { productos: Producto[] }) {
+export function ProductosTable({ productos, marcas }: { productos: Producto[]; marcas: MarcaInfo[] }) {
   const [busqueda, setBusqueda] = useState("");
   const [marca, setMarca] = useState("");
+  const marcaLabel = useMemo(() => Object.fromEntries(marcas.map((m) => [m.slug, m.nombre])), [marcas]);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -47,8 +40,8 @@ export function ProductosTable({ productos }: { productos: Producto[] }) {
           style={{ ...s.input, width: "220px", margin: 0 }}
         >
           <option value="">Todas las marcas</option>
-          {Object.entries(MARCA_LABEL).map(([valor, label]) => (
-            <option key={valor} value={valor}>{label}</option>
+          {marcas.map((m) => (
+            <option key={m.slug} value={m.slug}>{m.nombre}</option>
           ))}
         </select>
       </div>
@@ -87,7 +80,7 @@ export function ProductosTable({ productos }: { productos: Producto[] }) {
                 </td>
                 <td style={s.td}>{p.nombre}</td>
                 <td style={s.td}>${p.precio.toFixed(2)}</td>
-                <td style={s.td}>{MARCA_LABEL[p.marca] ?? p.marca}</td>
+                <td style={s.td}>{marcaLabel[p.marca] ?? p.marca}</td>
                 <td style={s.td}>
                   <span style={s.badge(p.disponible)}>{p.disponible ? "Sí" : "No"}</span>
                 </td>

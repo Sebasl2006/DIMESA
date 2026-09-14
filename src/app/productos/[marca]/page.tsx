@@ -5,17 +5,9 @@ import type { Producto } from "@/lib/types";
 import { ProductGrid } from "./ProductGrid";
 import { VideoHero } from "@/components/VideoHero";
 
-const MARCA_LABEL: Record<string, string> = {
-  botanique: "Botaniqué",
-  revlon: "Revlon",
-  mq_professional: "M|Q Professional",
-  truss: "TRUSS",
-  olaplex: "Olaplex",
-};
-
 // Video de introducción por marca (opcional). Cuando tengas el video de
-// otra marca listo, solo agrega su entrada aquí con la misma llave que
-// MARCA_LABEL — no hace falta tocar nada más de esta página.
+// otra marca listo, solo agrega su entrada aquí con el mismo slug que
+// tiene en la tabla "marcas" — no hace falta tocar nada más de esta página.
 const MARCA_VIDEO: Partial<Record<string, string>> = {
   botanique: "/videos/botanique-hero.mp4",
   revlon: "/videos/revlon-hero.mp4",
@@ -62,8 +54,10 @@ const MARCA_OVERLAY: Partial<Record<string, { titulo: string; texto: string }>> 
 
 export default async function MarcaPage({ params }: { params: Promise<{ marca: string }> }) {
   const { marca } = await params;
-  const label = MARCA_LABEL[marca];
-  if (!label) notFound();
+  const supabase = await createClient();
+  const { data: marcaInfo } = await supabase.from("marcas").select("nombre").eq("slug", marca).maybeSingle();
+  if (!marcaInfo) notFound();
+  const label = marcaInfo.nombre;
 
   const videoSrc = MARCA_VIDEO[marca];
   const overlayData = MARCA_OVERLAY[marca];
@@ -94,7 +88,6 @@ export default async function MarcaPage({ params }: { params: Promise<{ marca: s
     </div>
   ) : undefined;
 
-  const supabase = await createClient();
   const { data: productos } = await supabase
     .from("productos")
     .select("*")

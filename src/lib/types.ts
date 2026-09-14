@@ -1,5 +1,16 @@
 export type Categoria = "capilar" | "facial" | "corporal" | "masajes";
-export type Marca = "botanique" | "revlon" | "mq_professional" | "truss" | "olaplex";
+// Antes era un enum fijo de 5 valores — ahora las marcas se crean desde el
+// admin (tabla "marcas" en Supabase), así que cualquier texto es válido acá;
+// la relación real vive en la base de datos (productos.marca -> marcas.slug).
+export type Marca = string;
+
+export interface MarcaInfo {
+  id: string;
+  slug: string;
+  nombre: string;
+  imagen_url: string | null;
+  created_at: string;
+}
 
 export interface Producto {
   id: string;

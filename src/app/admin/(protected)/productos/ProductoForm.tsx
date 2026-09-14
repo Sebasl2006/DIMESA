@@ -3,18 +3,20 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type { Producto } from "@/lib/types";
+import type { MarcaInfo, Producto } from "@/lib/types";
 import * as s from "../../admin-styles";
 
 interface ProductoFormProps {
   producto?: Producto;
+  marcas: MarcaInfo[];
   action: (formData: FormData) => Promise<void>;
 }
 
-export function ProductoForm({ producto, action }: ProductoFormProps) {
+export function ProductoForm({ producto, marcas, action }: ProductoFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [marcaNueva, setMarcaNueva] = useState(false);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -46,13 +48,32 @@ export function ProductoForm({ producto, action }: ProductoFormProps) {
       <input name="precio" type="number" step="0.01" min="0" required defaultValue={producto?.precio} className="admin-input" style={s.input} />
 
       <label style={s.label}>Marca</label>
-      <select name="marca" defaultValue={producto?.marca ?? "botanique"} className="admin-input admin-select" style={s.input}>
-        <option value="botanique">Botaniqué</option>
-        <option value="revlon">Revlon</option>
-        <option value="mq_professional">M|Q Professional</option>
-        <option value="truss">TRUSS</option>
-        <option value="olaplex">Olaplex</option>
+      <select
+        name="marca"
+        defaultValue={producto?.marca ?? marcas[0]?.slug}
+        onChange={(e) => setMarcaNueva(e.target.value === "__nueva__")}
+        className="admin-input admin-select"
+        style={s.input}
+      >
+        {marcas.map((m) => (
+          <option key={m.slug} value={m.slug}>{m.nombre}</option>
+        ))}
+        <option value="__nueva__">+ Agregar marca nueva…</option>
       </select>
+
+      {marcaNueva && (
+        <div style={{ marginTop: "4px", marginBottom: "18px", padding: "16px", border: "1px dashed rgba(201,168,118,0.35)", borderRadius: "8px" }}>
+          <label style={s.label}>Nombre de la marca nueva</label>
+          <input name="marca_nueva_nombre" required={marcaNueva} className="admin-input" style={s.input} placeholder="Ej: Kerastase" />
+
+          <label style={s.label}>Foto de fondo para la marca (opcional)</label>
+          <input name="marca_nueva_imagen" type="file" accept="image/*" className="admin-input" style={{ ...s.input, padding: "10px 14px", marginBottom: 0 }} />
+          <div style={s.helpText}>
+            Se usa como fondo del cuadro de esta marca en la sección Productos de la página. Si no subes una, ese
+            cuadro muestra el nombre de la marca sobre un fondo oscuro hasta que subas una foto.
+          </div>
+        </div>
+      )}
 
       <label style={s.label}>Foto</label>
       {producto?.imagen_url && (

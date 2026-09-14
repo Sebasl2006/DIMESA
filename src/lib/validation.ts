@@ -23,6 +23,19 @@ export function enumValido<T extends string>(valor: string, permitidos: readonly
   return valor as T;
 }
 
+// Convierte "M|Q Professional Plus" en "mq_professional_plus" — mismo
+// estilo (minúsculas + guion bajo) que ya usan los slugs de marca
+// existentes (botanique, mq_professional, etc.), para que se vea igual de
+// prolijo en las URLs (/productos/mq_professional_plus).
+export function slugificar(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(new RegExp("[\\u0300-\\u036f]", "g"), "") // quita tildes
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 const TIPOS_IMAGEN_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const TAMANO_MAX_IMAGEN = 5 * 1024 * 1024; // 5MB
 

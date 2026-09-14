@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Producto } from "@/lib/types";
+import type { MarcaInfo, Producto } from "@/lib/types";
 import { ProductosTable } from "./ProductosTable";
 import * as s from "../../admin-styles";
 
 export default async function ProductosAdminPage() {
   const supabase = await createClient();
-  const { data: productos, error } = await supabase
-    .from("productos")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [{ data: productos, error }, { data: marcas }] = await Promise.all([
+    supabase.from("productos").select("*").order("created_at", { ascending: false }),
+    supabase.from("marcas").select("*").order("created_at", { ascending: true }),
+  ]);
 
   return (
     <div style={s.container}>
@@ -20,7 +20,9 @@ export default async function ProductosAdminPage() {
 
       <div style={s.card}>
         {error && <div style={s.errorBox}>No se pudieron cargar los productos: {error.message}</div>}
-        {!error && <ProductosTable productos={(productos ?? []) as Producto[]} />}
+        {!error && (
+          <ProductosTable productos={(productos ?? []) as Producto[]} marcas={(marcas ?? []) as MarcaInfo[]} />
+        )}
       </div>
     </div>
   );
