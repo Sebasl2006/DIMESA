@@ -236,7 +236,6 @@ export function LandingClient() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "space-between",
             padding: "6vh 24px",
             boxSizing: "border-box",
           }}
@@ -273,15 +272,21 @@ export function LandingClient() {
             </div>
           </div>
 
+          {/* flex:1 + centrado interno (en vez de position:absolute con un
+              "top" fijo en %) — así los botones siempre quedan centrados en
+              el espacio que sobra DEBAJO del logo, sin importar cuánto mida
+              ese logo. Con el "top" fijo, en pantallas más bajas que anchas
+              (laptops normales) el logo ocupaba más alto relativo y los
+              botones — pegados a un % fijo del alto total — quedaban
+              montados encima del subtítulo "CUENCA · ECUADOR". */}
           <div
             style={{
-              position: "absolute",
-              top: "48%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
+              flex: 1,
+              width: "100%",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
+              justifyContent: "center",
               gap: "20px",
             }}
           >
