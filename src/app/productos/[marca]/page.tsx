@@ -68,7 +68,10 @@ export default async function MarcaPage({ params }: { params: Promise<{ marca: s
   const videoSrc = MARCA_VIDEO[marca];
   const overlayData = MARCA_OVERLAY[marca];
   const overlay = overlayData ? (
-    <div style={{ maxWidth: "min(560px, 86vw)" }}>
+    // 68vw (en vez de 86vw) deja espacio libre para que el logo de Dimesa
+    // en la esquina inferior derecha del video no se monte sobre la última
+    // línea del texto en pantallas angostas (celular).
+    <div style={{ maxWidth: "min(560px, 68vw)" }}>
       <div
         className="font-serif"
         style={{ fontWeight: 300, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", color: "#e6d3ac", lineHeight: 1.1 }}
