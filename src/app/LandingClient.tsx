@@ -275,9 +275,6 @@ export function LandingClient() {
             <Link href="/profesionales" style={navItemStyle(2)} className="dimesa-nav-item">
               PROFESIONALES
             </Link>
-            <Link href="/informacion" style={navItemStyle(3)} className="dimesa-nav-item">
-              INFORMACIÓN
-            </Link>
           </div>
         </div>
       </div>
