@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -10,8 +10,14 @@ import Link from "next/link";
 // borra al cerrar la pestaña, así que en una visita nueva sí se reproduce.
 const INTRO_KEY = "dimesa-intro-vista";
 
+// En celulares en vertical, el video horizontal (16:9) recorta a la chica del
+// video y solo se le ven los brazos. Por debajo de este ancho se sirve una
+// versión recortada en vertical (9:16) que sí la mantiene en cuadro.
+const MOBILE_BREAKPOINT = "(max-width: 767px)";
+
 export function LandingClient() {
   const [revealed, setRevealed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   // Intentamos arrancar CON sonido. La mayoría de navegadores bloquean el
   // autoplay con audio sin interacción previa del usuario — si eso pasa,
   // cae solo a silencioso (eso siempre está permitido) y el botón queda
@@ -45,6 +51,18 @@ export function LandingClient() {
   useEffect(() => {
     const timer = setTimeout(() => setButtonVisible(true), 300);
     return () => clearTimeout(timer);
+  }, []);
+
+  // useLayoutEffect (no useEffect): debe fijar isMobile ANTES de que el
+  // siguiente efecto (el que arranca el autoplay) lea el <video> — si no,
+  // en celular arrancaría reproduciendo el video horizontal por un
+  // instante y luego se reiniciaría al cambiar de fuente.
+  useLayoutEffect(() => {
+    const mql = window.matchMedia(MOBILE_BREAKPOINT);
+    setIsMobile(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
   }, []);
 
   useEffect(() => {
@@ -132,8 +150,8 @@ export function LandingClient() {
       >
         <video
           ref={videoRef}
-          src="/videos/dimesa-hero.mp4"
-          poster="/images/dimesa-hero-poster.jpg"
+          src={isMobile ? "/videos/dimesa-hero-vertical.mp4" : "/videos/dimesa-hero.mp4"}
+          poster={isMobile ? "/images/dimesa-hero-vertical-poster.jpg" : "/images/dimesa-hero-poster.jpg"}
           playsInline
           preload="auto"
           onEnded={reveal}
