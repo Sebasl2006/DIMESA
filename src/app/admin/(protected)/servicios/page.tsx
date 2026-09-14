@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Servicio } from "@/lib/types";
@@ -50,7 +51,7 @@ export default async function ServiciosAdminPage() {
                 <tr key={sv.id}>
                   <td style={s.td}>
                     {sv.imagen_url ? (
-                      <img src={sv.imagen_url} alt={sv.nombre} style={s.thumb} />
+                      <Image src={sv.imagen_url} alt={sv.nombre} width={48} height={48} style={s.thumb} />
                     ) : (
                       <div style={s.thumbPlaceholder}>Sin foto</div>
                     )}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Profesional } from "@/lib/types";
@@ -43,7 +44,7 @@ export default async function ProfesionalesAdminPage() {
                 <tr key={p.id}>
                   <td style={s.td}>
                     {p.foto_url ? (
-                      <img src={p.foto_url} alt={p.nombre} style={s.thumb} />
+                      <Image src={p.foto_url} alt={p.nombre} width={48} height={48} style={s.thumb} />
                     ) : (
                       <div style={s.thumbPlaceholder}>Sin foto</div>
                     )}

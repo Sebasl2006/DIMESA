@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { Producto } from "@/lib/types";
 import { DeleteButton } from "../../DeleteButton";
@@ -75,7 +76,11 @@ export function ProductosTable({ productos }: { productos: Producto[] }) {
               <tr key={p.id}>
                 <td style={s.td}>
                   {p.imagen_url ? (
-                    <img src={p.imagen_url} alt={p.nombre} style={s.thumb} />
+                    // width/height=48 (no "fill") le piden a Next.js una miniatura
+                    // real de ese tamaño en vez de bajar la foto original completa
+                    // (varios MB) y encogerla solo con CSS — esto es lo que hacía
+                    // lenta la carga de esta tabla con muchos productos.
+                    <Image src={p.imagen_url} alt={p.nombre} width={48} height={48} style={s.thumb} />
                   ) : (
                     <div style={s.thumbPlaceholder}>Sin foto</div>
                   )}
