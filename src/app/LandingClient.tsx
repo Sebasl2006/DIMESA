@@ -15,6 +15,14 @@ const INTRO_KEY = "dimesa-intro-vista";
 // versión recortada en vertical (9:16) que sí la mantiene en cuadro.
 const MOBILE_BREAKPOINT = "(max-width: 767px)";
 
+// Cuando ya se vio la intro esta sesión, en vez de mostrar el <video> (que
+// hay que volver a decodificar/buscar cada vez que se regresa al inicio —
+// en celular eso tarda varios segundos y de pantalla en negro mientras
+// tanto) se muestra esta foto fija del último cuadro. Es la misma imagen
+// que ya usábamos como "poster" del video vertical en celular.
+const FONDO_FINAL_DESKTOP = "/images/dimesa-hero-final-poster.jpg";
+const FONDO_FINAL_MOBILE = "/images/dimesa-hero-vertical-poster.jpg";
+
 export function LandingClient() {
   const [revealed, setRevealed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -65,12 +73,14 @@ export function LandingClient() {
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
-  useEffect(() => {
+  // useLayoutEffect (no useEffect): si ya se vio la intro, "introSkipped"
+  // tiene que quedar en true ANTES de que el navegador pinte el primer
+  // cuadro — si no, alcanzaría a dibujar el <video> (con su poster de
+  // arranque, que es la entrada vacía) durante un instante antes de
+  // cambiar a la foto fija de cierre, y se notaría el parpadeo.
+  useLayoutEffect(() => {
     if (efectoIntroYaCorrioRef.current) return;
     efectoIntroYaCorrioRef.current = true;
-
-    const video = videoRef.current;
-    if (!video) return;
 
     let yaVista = false;
     try {
@@ -82,13 +92,6 @@ export function LandingClient() {
     if (yaVista) {
       setIntroSkipped(true);
       setRevealed(true);
-      // Deja el fondo quieto en el último cuadro del video, como si la
-      // intro ya hubiera terminado, en vez de arrancarla de nuevo.
-      const mostrarUltimoCuadro = () => {
-        video.currentTime = Math.max(video.duration - 0.1, 0);
-      };
-      if (video.readyState >= 1) mostrarUltimoCuadro();
-      else video.addEventListener("loadedmetadata", mostrarUltimoCuadro, { once: true });
       return;
     }
 
@@ -101,6 +104,8 @@ export function LandingClient() {
       // Sin acceso a sessionStorage — sin problema, ver comentario arriba.
     }
 
+    const video = videoRef.current;
+    if (!video) return;
     video.muted = false;
     const playPromise = video.play();
     if (playPromise !== undefined) {
@@ -148,23 +153,38 @@ export function LandingClient() {
           background: "#0b0a09",
         }}
       >
-        <video
-          ref={videoRef}
-          src={isMobile ? "/videos/dimesa-hero-vertical.mp4" : "/videos/dimesa-hero.mp4"}
-          poster={isMobile ? "/images/dimesa-hero-vertical-poster.jpg" : "/images/dimesa-hero-poster.jpg"}
-          playsInline
-          preload="auto"
-          onEnded={reveal}
-          onError={reveal}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            zIndex: 0,
-          }}
-        />
+        {introSkipped ? (
+          // Ya se vio la intro esta sesión: se muestra la foto fija del
+          // cierre en vez del <video> — evita tener que rebuscar/decodificar
+          // el video de nuevo cada vez que se vuelve al inicio (lento en
+          // celular, se notaba como una pantalla en negro de varios segundos).
+          <Image
+            src={isMobile ? FONDO_FINAL_MOBILE : FONDO_FINAL_DESKTOP}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            style={{ objectFit: "cover", zIndex: 0 }}
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            src={isMobile ? "/videos/dimesa-hero-vertical.mp4" : "/videos/dimesa-hero.mp4"}
+            poster={isMobile ? "/images/dimesa-hero-vertical-poster.jpg" : "/images/dimesa-hero-poster.jpg"}
+            playsInline
+            preload="auto"
+            onEnded={reveal}
+            onError={reveal}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              zIndex: 0,
+            }}
+          />
+        )}
 
         <button
           type="button"
