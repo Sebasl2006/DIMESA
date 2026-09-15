@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import type { CSSProperties } from "react";
 
 interface ImageSlotProps {
@@ -22,18 +25,37 @@ export function ImageSlot({
   placeholder,
   style,
   sizes = "(max-width: 768px) 100vw, 50vw",
-  quality = 100,
+  // 75 (en vez de 100) recorta bastante el peso del archivo sin pérdida
+  // visible en el tamaño en que estas fotos se muestran — con catálogos
+  // grandes (ej. Revlon, +150 productos) esto es lo que más nota el
+  // cliente mientras baja por la página.
+  quality = 75,
 }: ImageSlotProps) {
+  const [cargada, setCargada] = useState(false);
+
   if (src) {
     return (
-      <div style={{ position: "relative", width: "100%", height: "100%", ...style }}>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          background: "#161412",
+          ...style,
+        }}
+      >
         <Image
           src={src}
           alt={alt}
           fill
           quality={quality}
-          style={{ objectFit: "cover" }}
+          style={{
+            objectFit: "cover",
+            opacity: cargada ? 1 : 0,
+            transition: "opacity 300ms ease",
+          }}
           sizes={sizes}
+          onLoad={() => setCargada(true)}
         />
       </div>
     );
