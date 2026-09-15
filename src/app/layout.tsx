@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   // Confirma ante Google que somos los dueños del sitio (Search Console →
   // Prefijo de la URL → https://dimesaspa.com → Etiqueta HTML). Sin esto,
   // Google no deja pedir indexación ni ver el rendimiento en búsquedas.
-  verification: { google: "iw_lFhGbhRNDWEDq1ADhFLWPi6YetZnLZXU01Uja7Xk" },
+  verification: { google: "HKefamxjoxM56Ww_KjYT8AqGRnp4WX5T-KghcOdB3ns" },
   openGraph: {
     title: "Dimesa · Salón de Belleza y Salud Capilar en Cuenca, Ecuador",
     description: DESCRIPCION,
