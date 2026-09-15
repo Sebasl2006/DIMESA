@@ -6,6 +6,7 @@ import type { Servicio } from "@/lib/types";
 import { ImageSlot } from "@/components/ImageSlot";
 import { Reveal } from "@/components/Reveal";
 import { FondoLayer } from "@/components/FondoLayer";
+import { AvisoElegirProfesional } from "@/components/AvisoElegirProfesional";
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "593983163000";
 
@@ -61,6 +62,13 @@ export default async function ReservasPage({
   return (
     <div style={{ background: "#0b0a09", minHeight: "100vh" }}>
       <FondoLayer />
+      {/* Solo se avisa cuando el cliente entra directo a Reservas — si ya
+          viene desde la página de un profesional (trae "profesional" en la
+          URL), ya eligió con quién atenderse y no hace falta el aviso. Es
+          position:fixed (ver el componente), así que se puede montar en
+          cualquier parte del árbol — queda flotando visible siempre,
+          incluso si la persona ya se desplazó hacia abajo. */}
+      {!profesional && <AvisoElegirProfesional />}
       <div style={{ position: "relative", zIndex: 1 }}>
       <div
         style={{
