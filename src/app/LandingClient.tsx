@@ -4,10 +4,13 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import Image from "next/image";
 import Link from "next/link";
 
-// Solo se reproduce el video de entrada la primera vez que alguien llega a
-// esta pestaña. Si ya lo vio y navega a otra sección (Reservas, Productos...)
-// y vuelve al inicio, se salta directo al logo + botones — sessionStorage se
-// borra al cerrar la pestaña, así que en una visita nueva sí se reproduce.
+// Solo se reproduce el video de entrada en computadora, laptop o tablet, y
+// solo la primera vez que alguien llega a esta pestaña — en celular NUNCA
+// se reproduce (ver esCelular más abajo), se entra directo al logo y los
+// botones. Si en computadora/tablet ya se vio y la persona navega a otra
+// sección (Reservas, Productos...) y vuelve al inicio, también se salta
+// directo — sessionStorage se borra al cerrar la pestaña, así que en una
+// visita nueva sí se reproduce.
 const INTRO_KEY = "dimesa-intro-vista";
 
 // En celulares en vertical, el video horizontal (16:9) recorta a la chica del
@@ -92,14 +95,26 @@ export function LandingClient() {
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
-  // useLayoutEffect (no useEffect): si ya se vio la intro, "introSkipped"
-  // tiene que quedar en true ANTES de que el navegador pinte el primer
-  // cuadro — si no, alcanzaría a dibujar el <video> (con su poster de
-  // arranque, que es la entrada vacía) durante un instante antes de
-  // cambiar a la foto fija de cierre, y se notaría el parpadeo.
+  // useLayoutEffect (no useEffect): la decisión de saltar el video tiene
+  // que quedar tomada ANTES de que el navegador pinte el primer cuadro —
+  // si no, alcanzaría a dibujar el <video> (con su poster de arranque, que
+  // es la entrada vacía) durante un instante antes de cambiar a la foto
+  // fija de cierre, y se notaría el parpadeo.
   useLayoutEffect(() => {
     if (efectoIntroYaCorrioRef.current) return;
     efectoIntroYaCorrioRef.current = true;
+
+    // Chequeo propio e inmediato con matchMedia (no depende del estado
+    // "isMobile", que recién se termina de resolver en el otro efecto de
+    // aquí abajo, y que en la primerísima pasada todavía podría estar en
+    // su valor por defecto) — en celular jamás se reproduce el video.
+    const esCelular = window.matchMedia(MOBILE_BREAKPOINT).matches;
+
+    if (esCelular) {
+      setIntroSkipped(true);
+      setRevealed(true);
+      return;
+    }
 
     let yaVista = false;
     try {
