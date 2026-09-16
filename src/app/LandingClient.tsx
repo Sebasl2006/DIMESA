@@ -56,6 +56,25 @@ export function LandingClient() {
     }
   };
 
+  // Red de seguridad definitiva: un toque en la pantalla SIEMPRE cuenta
+  // como interacción real del usuario, así que video.play() llamado aquí
+  // adentro nunca lo bloquea ningún navegador (a diferencia del intento
+  // automático de más abajo, que en algunos celulares — sobre todo con el
+  // modo de bajo consumo activado — se queda trabado sin avisar). Si aun
+  // así el video no arranca, igual se revela el menú: mejor dejar pasar a
+  // la persona que dejarla tocando la pantalla sin que pase nada.
+  const handleTapHero = () => {
+    if (revealed) return;
+    const video = videoRef.current;
+    if (video && video.paused) {
+      video.muted = true;
+      video.play()?.catch(() => {});
+    }
+    window.setTimeout(() => {
+      if (!videoRef.current || videoRef.current.paused) reveal();
+    }, 400);
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => setButtonVisible(true), 300);
     return () => clearTimeout(timer);
@@ -121,10 +140,12 @@ export function LandingClient() {
     if (!video) return;
 
     // Red de seguridad: si el video se traba (pasa sobre todo en celular,
-    // con conexiones lentas o navegadores que ni siquiera avisan el error)
-    // esto igual revela el menú pasado un tiempo prudente, en vez de dejar
-    // a la persona con la pantalla congelada y sin ninguna opción.
-    const maxWaitTimer = setTimeout(reveal, 15000);
+    // con conexiones lentas, modo de bajo consumo, o navegadores que ni
+    // siquiera avisan el error) esto igual revela el menú pasado un tiempo
+    // prudente, en vez de dejar a la persona con la pantalla congelada y
+    // sin ninguna opción. Además, cualquier toque en la pantalla (ver
+    // handleTapHero) lo destraba al instante sin tener que esperar esto.
+    const maxWaitTimer = setTimeout(reveal, 6000);
 
     // Arrancar en silencio es lo único que los navegadores de celular
     // garantizan sin necesitar que la persona ya haya interactuado con la
@@ -189,6 +210,7 @@ export function LandingClient() {
     <>
       <div
         id="top"
+        onClick={handleTapHero}
         style={{
           position: "relative",
           width: "100%",
@@ -215,6 +237,8 @@ export function LandingClient() {
             ref={videoRef}
             src={isMobile ? "/videos/dimesa-hero-vertical.mp4" : "/videos/dimesa-hero.mp4"}
             poster={isMobile ? "/images/dimesa-hero-vertical-poster.jpg" : "/images/dimesa-hero-poster.jpg"}
+            autoPlay
+            muted
             playsInline
             preload="auto"
             onEnded={reveal}
