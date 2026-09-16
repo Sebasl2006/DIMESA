@@ -26,11 +26,11 @@ const FONDO_FINAL_MOBILE = "/images/dimesa-hero-vertical-poster.jpg";
 export function LandingClient() {
   const [revealed, setRevealed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  // Intentamos arrancar CON sonido. La mayoría de navegadores bloquean el
-  // autoplay con audio sin interacción previa del usuario — si eso pasa,
-  // cae solo a silencioso (eso siempre está permitido) y el botón queda
-  // para que la persona lo reactive a mano. Mismo patrón que VideoHero.
-  const [muted, setMuted] = useState(false);
+  // Arranca silenciado (es lo único que garantiza el autoplay en todos los
+  // navegadores de celular) y apenas el video ya está reproduciendo se
+  // intenta activar el sonido solo — si el navegador de todos modos lo
+  // bloquea, se queda callado y el botón permite reactivarlo a mano.
+  const [muted, setMuted] = useState(true);
   // El botón de sonido debe verse desde el arranque del video (no solo
   // después de que termine y se revele el resto), así que usa su propio
   // fade-in temprano en vez de depender de "revealed". No aplica cuando
@@ -103,19 +103,63 @@ export function LandingClient() {
     } catch {
       // Sin acceso a sessionStorage — sin problema, ver comentario arriba.
     }
+  }, []);
 
+  // Efecto separado del de arriba (y con isMobile en las dependencias) a
+  // propósito: "isMobile" arranca en false y recién se corrige un instante
+  // después (ver el useLayoutEffect de arriba), lo cual cambia el "src"
+  // del <video> de la versión horizontal a la vertical — ese cambio de
+  // fuente interrumpe con un AbortError cualquier reproducción ya en
+  // marcha. Si este efecto corriera una sola vez, ese primer intento
+  // fallido quedaba como el único intento y el video se congelaba para
+  // siempre. Al depender de "isMobile", el efecto se vuelve a ejecutar
+  // apenas se corrige, y reintenta sobre el <video> ya con la fuente
+  // correcta y definitiva.
+  useEffect(() => {
+    if (introSkipped) return;
     const video = videoRef.current;
     if (!video) return;
-    video.muted = false;
-    const playPromise = video.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        video.muted = true;
-        setMuted(true);
-        video.play().catch(() => {});
+
+    // Red de seguridad: si el video se traba (pasa sobre todo en celular,
+    // con conexiones lentas o navegadores que ni siquiera avisan el error)
+    // esto igual revela el menú pasado un tiempo prudente, en vez de dejar
+    // a la persona con la pantalla congelada y sin ninguna opción.
+    const maxWaitTimer = setTimeout(reveal, 15000);
+
+    // Arrancar en silencio es lo único que los navegadores de celular
+    // garantizan sin necesitar que la persona ya haya interactuado con la
+    // página — intentar arrancar CON sonido primero (como se hacía antes)
+    // hace que varios navegadores de celular directamente no avancen el
+    // video en vez de solo rechazar la promesa, dejando la pantalla
+    // congelada y sin que aparezca el menú. Se queda silenciado (el botón
+    // de arriba permite activarlo a mano) — probamos reactivarlo apenas
+    // arranca, pero en varios navegadores eso mismo lo vuelve a pausar,
+    // así que no vale el riesgo.
+    video.muted = true;
+
+    // Intentar play() apenas se monta no siempre "prende" si el video
+    // todavía no cargó nada — en vez de confiar en un solo intento, se
+    // reintenta cada vez que el navegador avisa que ya tiene datos nuevos,
+    // hasta que quede realmente reproduciendo.
+    const intentarReproducir = () => {
+      if (!video.paused) return;
+      video.play()?.catch(() => {
+        // No arrancó todavía — se reintenta con el próximo evento, o
+        // como último recurso, revela el menú el temporizador de arriba.
       });
-    }
-  }, []);
+    };
+    intentarReproducir();
+    video.addEventListener("loadeddata", intentarReproducir);
+    video.addEventListener("canplay", intentarReproducir);
+    video.addEventListener("canplaythrough", intentarReproducir);
+
+    return () => {
+      clearTimeout(maxWaitTimer);
+      video.removeEventListener("loadeddata", intentarReproducir);
+      video.removeEventListener("canplay", intentarReproducir);
+      video.removeEventListener("canplaythrough", intentarReproducir);
+    };
+  }, [isMobile, introSkipped]);
 
   const toggleSound = () => {
     const video = videoRef.current;

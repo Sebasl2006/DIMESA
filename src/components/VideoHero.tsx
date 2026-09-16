@@ -26,13 +26,11 @@ interface VideoHeroProps {
 export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoHeroProps) {
   const [revealed, setRevealed] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(false);
-  // Intentamos arrancar CON sonido — como se llega aquí haciendo clic en el
-  // cuadro de la marca, ese clic cuenta como interacción real y la mayoría
-  // de navegadores (Chrome incluido) sí permiten el audio en ese caso. Si
-  // el navegador de todos modos lo bloquea (ej. alguien entra por link
-  // directo, sin haber hecho clic antes), cae solo a silencioso — eso
-  // SIEMPRE está permitido — y el botón queda para que lo reactive a mano.
-  const [muted, setMuted] = useState(false);
+  // Arranca silenciado (es lo único que garantiza el autoplay en todos los
+  // navegadores de celular) y apenas el video ya está reproduciendo se
+  // intenta activar el sonido solo — si el navegador de todos modos lo
+  // bloquea, se queda callado y el botón permite reactivarlo a mano.
+  const [muted, setMuted] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -41,25 +39,53 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = false;
-    const playPromise = video.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        video.muted = true;
-        setMuted(true);
-        video.play().catch(() => {});
-      });
-    }
-  }, []);
-
   const reveal = () => {
     if (revealed) return;
     setRevealed(true);
     contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Red de seguridad: si el video se traba (pasa sobre todo en celular)
+    // esto igual revela el resto de la página pasado un tiempo prudente,
+    // en vez de dejar a la persona con la pantalla congelada.
+    const maxWaitTimer = setTimeout(reveal, 15000);
+
+    // Arrancar en silencio es lo único que los navegadores de celular
+    // garantizan sin necesitar interacción previa — intentar arrancar CON
+    // sonido primero hacía que varios navegadores de celular directamente
+    // no avanzaran el video en vez de solo rechazar la promesa, dejando la
+    // pantalla congelada. Se queda silenciado (el botón permite activarlo a
+    // mano) — probamos reactivarlo apenas arranca, pero en varios
+    // navegadores eso mismo lo vuelve a pausar, así que no vale el riesgo.
+    video.muted = true;
+
+    // Intentar play() apenas se monta no siempre "prende" si el video
+    // todavía no cargó nada — en vez de confiar en un solo intento, se
+    // reintenta cada vez que el navegador avisa que ya tiene datos nuevos,
+    // hasta que quede realmente reproduciendo.
+    const intentarReproducir = () => {
+      if (!video.paused) return;
+      video.play()?.catch(() => {
+        // No arrancó todavía — se reintenta con el próximo evento, o
+        // como último recurso, revela la página el temporizador de arriba.
+      });
+    };
+    intentarReproducir();
+    video.addEventListener("loadeddata", intentarReproducir);
+    video.addEventListener("canplay", intentarReproducir);
+    video.addEventListener("canplaythrough", intentarReproducir);
+
+    return () => {
+      clearTimeout(maxWaitTimer);
+      video.removeEventListener("loadeddata", intentarReproducir);
+      video.removeEventListener("canplay", intentarReproducir);
+      video.removeEventListener("canplaythrough", intentarReproducir);
+    };
+  }, []);
 
   const toggleSound = () => {
     const video = videoRef.current;
