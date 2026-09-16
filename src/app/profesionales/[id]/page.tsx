@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Profesional } from "@/lib/types";
 import { ImageSlot } from "@/components/ImageSlot";
 import { FondoLayer } from "@/components/FondoLayer";
+import { partirBio } from "@/lib/bio";
 
 // Si el admin no escribió una bio a mano, se arma una razonable a partir
 // del nombre + especialidad + credenciales — así la página nunca sale
@@ -29,15 +30,11 @@ export default async function ProfesionalDetallePage({ params }: { params: Promi
   const p = data as Profesional;
   const bio = p.bio?.trim() || bioAutomatica(p);
 
-  // La bio se escribe como "credenciales — frase personal" (con un guion
-  // largo rodeado de espacios). Se parte ahí: la primera parte sale como
-  // texto normal en negro, la segunda como una "viñeta" tipo globo de
-  // diálogo pegada a la foto. Si no hay guion largo (bio automática, por
-  // ejemplo), se muestra todo como texto normal y no aparece el globo.
-  const separador = " — ";
-  const indiceSeparador = bio.lastIndexOf(separador);
-  const textoCredenciales = indiceSeparador === -1 ? bio : bio.slice(0, indiceSeparador).trim();
-  const fraseDestacada = indiceSeparador === -1 ? null : bio.slice(indiceSeparador + separador.length).trim();
+  // La primera parte sale como texto normal en negro, la segunda (si el
+  // admin escribió una) como una "viñeta" tipo globo de diálogo pegada a
+  // la foto — ver src/lib/bio.ts para cómo se guardan juntas las dos.
+  const { texto: textoCredenciales, frase: fraseDestacadaTexto } = partirBio(bio);
+  const fraseDestacada = fraseDestacadaTexto || null;
 
   return (
     <div style={{ background: "#0b0a09", minHeight: "100vh" }}>
@@ -137,19 +134,21 @@ export default async function ProfesionalDetallePage({ params }: { params: Promi
             {p.especialidad.toUpperCase()}
           </div>
 
-          <div
-            style={{
-              fontFamily: "var(--font-montserrat), sans-serif",
-              fontWeight: 300,
-              fontSize: "16px",
-              lineHeight: 1.85,
-              color: "#000000",
-              marginTop: "32px",
-            }}
-          >
-            {textoCredenciales}
-            {/\.$/.test(textoCredenciales) ? "" : "."}
-          </div>
+          {textoCredenciales && (
+            <div
+              style={{
+                fontFamily: "var(--font-montserrat), sans-serif",
+                fontWeight: 300,
+                fontSize: "16px",
+                lineHeight: 1.85,
+                color: "#000000",
+                marginTop: "32px",
+              }}
+            >
+              {textoCredenciales}
+              {/\.$/.test(textoCredenciales) ? "" : "."}
+            </div>
+          )}
 
           <div style={{ marginTop: "44px" }}>
             <Link

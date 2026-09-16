@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Profesional } from "@/lib/types";
+import { partirBio } from "@/lib/bio";
 import * as s from "../../admin-styles";
 
 interface ProfesionalFormProps {
@@ -15,6 +16,7 @@ export function ProfesionalForm({ profesional, action }: ProfesionalFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const { texto: bioTexto, frase: bioFrase } = partirBio(profesional?.bio ?? "");
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -68,10 +70,10 @@ export function ProfesionalForm({ profesional, action }: ProfesionalFormProps) {
 
       <label style={s.label}>Bio (página &quot;Ver información&quot;)</label>
       <textarea
-        name="bio"
+        name="bio_texto"
         rows={4}
-        placeholder='Ej: "Hola, soy [nombre]. Soy [título] con [X] horas de capacitación en [especialidad]. Voy a dejar tu cabello/piel..."'
-        defaultValue={profesional?.bio ?? ""}
+        placeholder='Ej: "Hola, soy [nombre]. Soy [título] con [X] horas de capacitación en [especialidad]..."'
+        defaultValue={bioTexto}
         className="admin-input"
         style={{ ...s.input, resize: "vertical", fontFamily: "inherit" }}
       />
@@ -79,6 +81,20 @@ export function ProfesionalForm({ profesional, action }: ProfesionalFormProps) {
         Un párrafo en primera persona, tono cercano — sale en la página de detalle cuando alguien hace clic en
         &quot;Ver información&quot; desde la lista de profesionales. Si lo dejas vacío, se arma uno automático a
         partir de las credenciales de arriba.
+      </div>
+
+      <label style={s.label}>Frase para la viñeta destacada (opcional)</label>
+      <textarea
+        name="bio_frase"
+        rows={3}
+        placeholder='Ej: "Voy a dejar tu piel y tu cabello tan suaves y cuidados que vas a querer volver a sentir esa sensación una y otra vez."'
+        defaultValue={bioFrase}
+        className="admin-input"
+        style={{ ...s.input, resize: "vertical", fontFamily: "inherit" }}
+      />
+      <div style={s.helpText}>
+        Esta frase aparece resaltada en un globito de texto junto a la foto, arriba del nombre. Si la dejas vacía,
+        no aparece ningún globito — solo la bio de arriba.
       </div>
 
       <label style={s.label}>Foto</label>

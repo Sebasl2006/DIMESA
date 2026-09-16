@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, imagenValida } from "@/lib/validation";
+import { unirBio } from "@/lib/bio";
 
 async function subirImagen(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -22,11 +23,12 @@ async function subirImagen(
 }
 
 function leerCampos(formData: FormData) {
+  const bio = unirBio(String(formData.get("bio_texto") || ""), String(formData.get("bio_frase") || ""));
   return {
     nombre: requerido(String(formData.get("nombre") || ""), "Nombre"),
     especialidad: requerido(String(formData.get("especialidad") || ""), "Especialidad"),
     descripcion: String(formData.get("descripcion") || "").trim(),
-    bio: String(formData.get("bio") || "").trim() || null,
+    bio: bio || null,
     disponible: formData.get("disponible") === "on",
   };
 }
