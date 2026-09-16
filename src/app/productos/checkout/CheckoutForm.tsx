@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import { useCart } from "../CartContext";
 import { ImageSlot } from "@/components/ImageSlot";
@@ -78,17 +78,38 @@ export function CheckoutForm({ direccionLocal, cuentasBancarias = [] }: Checkout
   const setField = (field: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
+  // Compartida entre "Enviar comprobante" y "Confirmar pedido" — antes solo
+  // el segundo la revisaba, así que por transferencia se podía mandar el
+  // comprobante por WhatsApp sin haber llenado nombre/correo/teléfono (ni
+  // la dirección, si eligió envío a domicilio), y el mensaje de WhatsApp
+  // salía sin el nombre real de la persona.
+  const validarDatos = (): string | null => {
+    if (!form.nombre || !form.correo || !form.telefono) return "Completa nombre, correo y teléfono.";
+    if (isDomicilio && (!form.provincia || !form.ciudad || !form.direccion || !form.referencia)) {
+      return "Completa provincia, ciudad, dirección y referencia para el envío.";
+    }
+    return null;
+  };
+
+  const handleEnviarComprobante = (e: MouseEvent<HTMLAnchorElement>) => {
+    const error = validarDatos();
+    if (error) {
+      e.preventDefault();
+      setFormError(error);
+      return;
+    }
+    setFormError("");
+    setComprobanteEnviado(true);
+  };
+
   const submitPayment = async () => {
     if (esTransferencia && !comprobanteEnviado) {
       setFormError("Primero envía el comprobante de pago.");
       return;
     }
-    if (!form.nombre || !form.correo || !form.telefono) {
-      setFormError("Completa nombre, correo y teléfono.");
-      return;
-    }
-    if (isDomicilio && (!form.provincia || !form.ciudad || !form.direccion || !form.referencia)) {
-      setFormError("Completa provincia, ciudad, dirección y referencia para el envío.");
+    const errorDatos = validarDatos();
+    if (errorDatos) {
+      setFormError(errorDatos);
       return;
     }
     setFormError("");
@@ -307,10 +328,10 @@ export function CheckoutForm({ direccionLocal, cuentasBancarias = [] }: Checkout
                     Realiza la transferencia y envíanos el comprobante por WhatsApp para validar tu pedido.
                   </div>
                   <a
-                    href={waHref(`Hola, soy ${form.nombre || "___"}, te envío el comprobante de mi transferencia por mi pedido en Dimesa.`)}
+                    href={waHref(`Hola, soy ${form.nombre}, te envío el comprobante de mi transferencia por mi pedido en Dimesa.`)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => setComprobanteEnviado(true)}
+                    onClick={handleEnviarComprobante}
                     style={{
                       display: "flex",
                       alignItems: "center",
