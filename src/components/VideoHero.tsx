@@ -68,12 +68,14 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     const video = videoRef.current;
     if (!video) return;
 
-    // Red de seguridad: si el video se traba (pasa sobre todo en celular,
-    // con conexiones lentas, modo de bajo consumo, o navegadores que ni
-    // siquiera avisan el error) esto igual revela el resto de la página
-    // pasado un tiempo prudente. Además, cualquier toque en la pantalla
-    // (ver handleTapHero) lo destraba al instante sin tener que esperar esto.
-    const maxWaitTimer = setTimeout(reveal, 6000);
+    // Red de seguridad: si el video se traba de verdad (conexión lenta,
+    // modo de bajo consumo, o un navegador que ni siquiera avisa el error)
+    // esto igual revela el resto de la página pasado un tiempo bien por
+    // encima de lo que dura cualquiera de estos videos (~10s) — para no
+    // cortar el video a la mitad en el caso normal, que es la inmensa
+    // mayoría de las veces. Además, cualquier toque en la pantalla (ver
+    // handleTapHero) lo destraba al instante sin tener que esperar esto.
+    const maxWaitTimer = setTimeout(reveal, 20000);
 
     // Arrancar en silencio es lo único que los navegadores de celular
     // garantizan sin necesitar interacción previa — intentar arrancar CON

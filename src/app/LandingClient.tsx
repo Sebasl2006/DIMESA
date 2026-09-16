@@ -13,33 +13,39 @@ import Link from "next/link";
 // visita nueva sí se reproduce.
 const INTRO_KEY = "dimesa-intro-vista";
 
-// En celulares en vertical, el video horizontal (16:9) recorta a la chica del
-// video y solo se le ven los brazos. Por debajo de este ancho se sirve una
-// versión recortada en vertical (9:16) que sí la mantiene en cuadro.
+// Mismo punto de corte que la regla @media de aquí abajo (dimesa-hero-bg-*)
+// — tiene que ser el mismo número en los dos lados, o JS y CSS podrían no
+// ponerse de acuerdo sobre qué mostrar.
 const MOBILE_BREAKPOINT = "(max-width: 767px)";
 
-// Cuando ya se vio la intro esta sesión, en vez de mostrar el <video> (que
-// hay que volver a decodificar/buscar cada vez que se regresa al inicio —
-// en celular eso tarda varios segundos y de pantalla en negro mientras
-// tanto) se muestra esta foto fija del último cuadro. Es la misma imagen
-// que ya usábamos como "poster" del video vertical en celular.
+// Foto fija de fondo — el mismo cuadro final que se ve al terminar el
+// video en computadora, o el que se ve directo en celular (nunca hay
+// video ahí). Las dos SIEMPRE están en el HTML desde el primerísimo
+// pintado (ver el <style jsx global> de abajo, que decide con CSS puro
+// cuál mostrar según el ancho de pantalla) — antes esta decisión se
+// tomaba en JavaScript después de montar React, y en una conexión lenta
+// de celular se alcanzaba a ver un instante de fondo negro (o el video
+// equivocado) mientras tanto.
 const FONDO_FINAL_DESKTOP = "/images/dimesa-hero-final-poster.jpg";
 const FONDO_FINAL_MOBILE = "/images/dimesa-hero-vertical-poster.jpg";
 
 export function LandingClient() {
   const [revealed, setRevealed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  // Solo se pone en true para computadora/laptop/tablet en su primera
+  // visita de la sesión (ver el useLayoutEffect de abajo) — arranca en
+  // false tanto en el servidor como en el primer render del cliente, así
+  // que el <video> nunca llega a existir en el HTML para nadie en celular,
+  // ni siquiera por una fracción de segundo.
+  const [mostrarVideo, setMostrarVideo] = useState(false);
   // Arranca silenciado (es lo único que garantiza el autoplay en todos los
-  // navegadores de celular) y apenas el video ya está reproduciendo se
-  // intenta activar el sonido solo — si el navegador de todos modos lo
-  // bloquea, se queda callado y el botón permite reactivarlo a mano.
+  // navegadores) y apenas el video ya está reproduciendo se intenta
+  // activar el sonido solo — si el navegador de todos modos lo bloquea, se
+  // queda callado y el botón permite reactivarlo a mano.
   const [muted, setMuted] = useState(true);
   // El botón de sonido debe verse desde el arranque del video (no solo
   // después de que termine y se revele el resto), así que usa su propio
-  // fade-in temprano en vez de depender de "revealed". No aplica cuando
-  // se salta el video (introSkipped) — ahí no hay audio que controlar.
+  // fade-in temprano en vez de depender de "revealed".
   const [buttonVisible, setButtonVisible] = useState(false);
-  const [introSkipped, setIntroSkipped] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   // En desarrollo, React ejecuta cada efecto dos veces seguidas al montar
   // (para ayudar a encontrar bugs) — sin este freno, la primera pasada
@@ -62,10 +68,10 @@ export function LandingClient() {
   // Red de seguridad definitiva: un toque en la pantalla SIEMPRE cuenta
   // como interacción real del usuario, así que video.play() llamado aquí
   // adentro nunca lo bloquea ningún navegador (a diferencia del intento
-  // automático de más abajo, que en algunos celulares — sobre todo con el
-  // modo de bajo consumo activado — se queda trabado sin avisar). Si aun
-  // así el video no arranca, igual se revela el menú: mejor dejar pasar a
-  // la persona que dejarla tocando la pantalla sin que pase nada.
+  // automático de más abajo, que en algunas computadoras — sobre todo con
+  // el modo de bajo consumo activado — se queda trabado sin avisar). Si
+  // aun así el video no arranca, igual se revela el menú: mejor dejar
+  // pasar a la persona que dejarla tocando la pantalla sin que pase nada.
   const handleTapHero = () => {
     if (revealed) return;
     const video = videoRef.current;
@@ -83,35 +89,18 @@ export function LandingClient() {
     return () => clearTimeout(timer);
   }, []);
 
-  // useLayoutEffect (no useEffect): debe fijar isMobile ANTES de que el
-  // siguiente efecto (el que arranca el autoplay) lea el <video> — si no,
-  // en celular arrancaría reproduciendo el video horizontal por un
-  // instante y luego se reiniciaría al cambiar de fuente.
-  useLayoutEffect(() => {
-    const mql = window.matchMedia(MOBILE_BREAKPOINT);
-    setIsMobile(mql.matches);
-    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
-
-  // useLayoutEffect (no useEffect): la decisión de saltar el video tiene
-  // que quedar tomada ANTES de que el navegador pinte el primer cuadro —
-  // si no, alcanzaría a dibujar el <video> (con su poster de arranque, que
-  // es la entrada vacía) durante un instante antes de cambiar a la foto
-  // fija de cierre, y se notaría el parpadeo.
+  // useLayoutEffect (no useEffect): la decisión de mostrar el video tiene
+  // que quedar tomada ANTES de que el navegador pinte el primer cuadro, o
+  // se notaría un parpadeo cuando cambia justo después del primer pintado.
   useLayoutEffect(() => {
     if (efectoIntroYaCorrioRef.current) return;
     efectoIntroYaCorrioRef.current = true;
 
-    // Chequeo propio e inmediato con matchMedia (no depende del estado
-    // "isMobile", que recién se termina de resolver en el otro efecto de
-    // aquí abajo, y que en la primerísima pasada todavía podría estar en
-    // su valor por defecto) — en celular jamás se reproduce el video.
     const esCelular = window.matchMedia(MOBILE_BREAKPOINT).matches;
 
     if (esCelular) {
-      setIntroSkipped(true);
+      // En celular nunca se muestra el video — directo al menú, sobre la
+      // foto fija (que ya está de fondo desde el primer pintado por CSS).
       setRevealed(true);
       return;
     }
@@ -124,7 +113,6 @@ export function LandingClient() {
     }
 
     if (yaVista) {
-      setIntroSkipped(true);
       setRevealed(true);
       return;
     }
@@ -137,40 +125,28 @@ export function LandingClient() {
     } catch {
       // Sin acceso a sessionStorage — sin problema, ver comentario arriba.
     }
+
+    setMostrarVideo(true);
   }, []);
 
-  // Efecto separado del de arriba (y con isMobile en las dependencias) a
-  // propósito: "isMobile" arranca en false y recién se corrige un instante
-  // después (ver el useLayoutEffect de arriba), lo cual cambia el "src"
-  // del <video> de la versión horizontal a la vertical — ese cambio de
-  // fuente interrumpe con un AbortError cualquier reproducción ya en
-  // marcha. Si este efecto corriera una sola vez, ese primer intento
-  // fallido quedaba como el único intento y el video se congelaba para
-  // siempre. Al depender de "isMobile", el efecto se vuelve a ejecutar
-  // apenas se corrige, y reintenta sobre el <video> ya con la fuente
-  // correcta y definitiva.
   useEffect(() => {
-    if (introSkipped) return;
+    if (!mostrarVideo) return;
     const video = videoRef.current;
     if (!video) return;
 
-    // Red de seguridad: si el video se traba (pasa sobre todo en celular,
-    // con conexiones lentas, modo de bajo consumo, o navegadores que ni
-    // siquiera avisan el error) esto igual revela el menú pasado un tiempo
-    // prudente, en vez de dejar a la persona con la pantalla congelada y
-    // sin ninguna opción. Además, cualquier toque en la pantalla (ver
-    // handleTapHero) lo destraba al instante sin tener que esperar esto.
-    const maxWaitTimer = setTimeout(reveal, 6000);
+    // Red de seguridad: si el video se traba de verdad (conexión lenta,
+    // modo de bajo consumo, o un navegador que ni siquiera avisa el error)
+    // esto igual revela el menú pasado un tiempo bien por encima de lo que
+    // dura el video (~10s) — para no cortarlo a la mitad en el caso
+    // normal. Además, cualquier toque en la pantalla (ver handleTapHero)
+    // lo destraba al instante sin tener que esperar esto.
+    const maxWaitTimer = setTimeout(reveal, 20000);
 
-    // Arrancar en silencio es lo único que los navegadores de celular
-    // garantizan sin necesitar que la persona ya haya interactuado con la
-    // página — intentar arrancar CON sonido primero (como se hacía antes)
-    // hace que varios navegadores de celular directamente no avancen el
-    // video en vez de solo rechazar la promesa, dejando la pantalla
-    // congelada y sin que aparezca el menú. Se queda silenciado (el botón
-    // de arriba permite activarlo a mano) — probamos reactivarlo apenas
-    // arranca, pero en varios navegadores eso mismo lo vuelve a pausar,
-    // así que no vale el riesgo.
+    // Arrancar en silencio es lo único que los navegadores garantizan sin
+    // necesitar que la persona ya haya interactuado con la página. Se
+    // queda silenciado (el botón de arriba permite activarlo a mano) —
+    // probamos reactivarlo apenas arranca, pero en varios navegadores eso
+    // mismo lo vuelve a pausar, así que no vale el riesgo.
     video.muted = true;
 
     // Intentar play() apenas se monta no siempre "prende" si el video
@@ -195,7 +171,7 @@ export function LandingClient() {
       video.removeEventListener("canplay", intentarReproducir);
       video.removeEventListener("canplaythrough", intentarReproducir);
     };
-  }, [isMobile, introSkipped]);
+  }, [mostrarVideo]);
 
   const toggleSound = () => {
     const video = videoRef.current;
@@ -234,24 +210,33 @@ export function LandingClient() {
           background: "#0b0a09",
         }}
       >
-        {introSkipped ? (
-          // Ya se vio la intro esta sesión: se muestra la foto fija del
-          // cierre en vez del <video> — evita tener que rebuscar/decodificar
-          // el video de nuevo cada vez que se vuelve al inicio (lento en
-          // celular, se notaba como una pantalla en negro de varios segundos).
-          <Image
-            src={isMobile ? FONDO_FINAL_MOBILE : FONDO_FINAL_DESKTOP}
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            style={{ objectFit: "cover", zIndex: 0 }}
-          />
-        ) : (
+        {/* Las dos siempre están en el HTML — la clase decide con CSS puro
+            (ver <style jsx global> abajo) cuál se ve según el ancho de
+            pantalla, sin depender de que React termine de hidratarse. */}
+        <Image
+          src={FONDO_FINAL_MOBILE}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="dimesa-hero-bg dimesa-hero-bg-mobile"
+          style={{ objectFit: "cover", zIndex: 0 }}
+        />
+        <Image
+          src={FONDO_FINAL_DESKTOP}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="dimesa-hero-bg dimesa-hero-bg-desktop"
+          style={{ objectFit: "cover", zIndex: 0 }}
+        />
+
+        {mostrarVideo && (
           <video
             ref={videoRef}
-            src={isMobile ? "/videos/dimesa-hero-vertical.mp4" : "/videos/dimesa-hero.mp4"}
-            poster={isMobile ? "/images/dimesa-hero-vertical-poster.jpg" : "/images/dimesa-hero-poster.jpg"}
+            src="/videos/dimesa-hero.mp4"
+            poster="/images/dimesa-hero-poster.jpg"
             autoPlay
             muted
             playsInline
@@ -284,7 +269,7 @@ export function LandingClient() {
             border: "1px solid rgba(201,168,118,0.4)",
             background: "rgba(11,10,9,0.55)",
             backdropFilter: "blur(4px)",
-            display: introSkipped ? "none" : "flex",
+            display: mostrarVideo ? "flex" : "none",
             alignItems: "center",
             gap: "9px",
             cursor: "pointer",
@@ -413,6 +398,20 @@ export function LandingClient() {
         .dimesa-nav-item:hover {
           background: #c9a876 !important;
           color: #0b0a09 !important;
+        }
+        .dimesa-hero-bg-mobile {
+          display: block;
+        }
+        .dimesa-hero-bg-desktop {
+          display: none;
+        }
+        @media (min-width: 768px) {
+          .dimesa-hero-bg-mobile {
+            display: none;
+          }
+          .dimesa-hero-bg-desktop {
+            display: block;
+          }
         }
       `}</style>
     </>
