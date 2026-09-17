@@ -99,6 +99,12 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
               <div style={{ color: "#c9a876", whiteSpace: "nowrap" }}>{fmt(linea.precio * linea.cantidad)}</div>
             </div>
           ))}
+          {p.cargo_envio > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", fontSize: "14px", color: "#8a8580" }}>
+              <div>Envío a domicilio</div>
+              <div>{fmt(p.cargo_envio)}</div>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "16px", marginTop: "8px", fontSize: "15px", fontWeight: 600, color: "#e6d3ac" }}>
             <div>TOTAL</div>
             <div>{fmt(p.total)}</div>

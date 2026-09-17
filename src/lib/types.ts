@@ -88,6 +88,9 @@ export interface Pedido {
   cliente_direccion: string;
   cliente_referencia: string;
   productos: LineaPedido[];
+  // Cargo fijo por envío a domicilio, ya incluido en "total" — 0 si el
+  // pedido fue "recoger en tienda".
+  cargo_envio: number;
   total: number;
   estado: "pendiente" | "pagado" | "cancelado";
   estado_envio: "pendiente" | "enviado" | "finalizado";

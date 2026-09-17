@@ -2,6 +2,7 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { requerido } from "@/lib/validation";
+import { CARGO_ENVIO_DOMICILIO } from "@/lib/constants";
 import type { LineaPedido } from "@/lib/types";
 
 interface CrearPedidoInput {
@@ -80,7 +81,10 @@ export async function crearPedido(input: CrearPedidoInput) {
     };
   });
 
-  const total = lineasVerificadas.reduce((sum, l) => sum + l.precio * l.cantidad, 0);
+  // El cargo de envío a domicilio se decide aquí, nunca con un valor que
+  // mande el navegador — así nadie puede quitárselo manipulando la petición.
+  const cargoEnvio = input.entrega === "domicilio" ? CARGO_ENVIO_DOMICILIO : 0;
+  const total = lineasVerificadas.reduce((sum, l) => sum + l.precio * l.cantidad, 0) + cargoEnvio;
   if (!Number.isFinite(total) || total <= 0) {
     throw new Error("El total del pedido no es válido.");
   }
@@ -94,6 +98,7 @@ export async function crearPedido(input: CrearPedidoInput) {
     cliente_direccion: direccion,
     cliente_referencia: referencia,
     productos: lineasVerificadas,
+    cargo_envio: cargoEnvio,
     total: Math.round(total * 100) / 100,
     estado: input.metodoPago === "transferencia" ? "pendiente" : "pagado",
     estado_envio: "pendiente",
