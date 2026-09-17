@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, precioValido, imagenValida, slugificar } from "@/lib/validation";
+import { borrarImagenStorage } from "@/lib/storage";
 
 async function subirImagen(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -44,6 +45,35 @@ async function crearMarca(
     throw new Error("No se pudo crear la marca: " + error.message);
   }
   return slug;
+}
+
+// Borra una marca — solo si ya no tiene productos (si los tuviera, se
+// quedarían con una "marca" que ya no existe). Antes había que borrar
+// marcas de prueba a mano con SQL directo en Supabase porque no existía
+// ninguna forma de hacerlo desde el admin.
+export async function eliminarMarca(slug: string) {
+  const supabase = await createClient();
+  await requireAdmin(supabase);
+
+  const { count } = await supabase
+    .from("productos")
+    .select("id", { count: "exact", head: true })
+    .eq("marca", slug);
+
+  if (count && count > 0) {
+    throw new Error(
+      `No se puede borrar: todavía tiene ${count} producto${count === 1 ? "" : "s"}. Bórralos o cámbiales la marca primero.`
+    );
+  }
+
+  const { data, error } = await supabase.from("marcas").delete().eq("slug", slug).select("imagen_url").single();
+  if (error) throw new Error(error.message);
+
+  await borrarImagenStorage(supabase, data?.imagen_url);
+
+  revalidatePath("/admin/marcas");
+  revalidatePath("/admin/productos");
+  revalidatePath("/productos", "layout");
 }
 
 // Resuelve a qué marca (slug) queda el producto: si se eligió "+ Agregar
@@ -97,6 +127,12 @@ export async function actualizarProducto(id: string, formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(error.message);
 
+  // Si se subió una foto nueva, la anterior ya no está referenciada por
+  // nada — se borra para no dejarla ocupando espacio en el storage.
+  if (imagenNueva && imagenActual) {
+    await borrarImagenStorage(supabase, imagenActual);
+  }
+
   revalidatePath("/admin/productos");
   revalidatePath("/productos", "layout");
 }
@@ -104,8 +140,9 @@ export async function actualizarProducto(id: string, formData: FormData) {
 export async function eliminarProducto(id: string) {
   const supabase = await createClient();
   await requireAdmin(supabase);
-  const { error } = await supabase.from("productos").delete().eq("id", id);
+  const { data, error } = await supabase.from("productos").delete().eq("id", id).select("imagen_url").single();
   if (error) throw new Error(error.message);
+  await borrarImagenStorage(supabase, data?.imagen_url);
   revalidatePath("/admin/productos");
   revalidatePath("/productos", "layout");
 }

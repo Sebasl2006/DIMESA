@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, imagenValida } from "@/lib/validation";
 import { unirBio } from "@/lib/bio";
+import { borrarImagenStorage } from "@/lib/storage";
 
 async function subirImagen(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -59,6 +60,10 @@ export async function actualizarProfesional(id: string, formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(error.message);
 
+  if (fotoNueva && fotoActual) {
+    await borrarImagenStorage(supabase, fotoActual);
+  }
+
   revalidatePath("/admin/profesionales");
   revalidatePath("/profesionales");
   revalidatePath(`/profesionales/${id}`);
@@ -67,8 +72,9 @@ export async function actualizarProfesional(id: string, formData: FormData) {
 export async function eliminarProfesional(id: string) {
   const supabase = await createClient();
   await requireAdmin(supabase);
-  const { error } = await supabase.from("profesionales").delete().eq("id", id);
+  const { data, error } = await supabase.from("profesionales").delete().eq("id", id).select("foto_url").single();
   if (error) throw new Error(error.message);
+  await borrarImagenStorage(supabase, data?.foto_url);
   revalidatePath("/admin/profesionales");
   revalidatePath("/profesionales");
 }

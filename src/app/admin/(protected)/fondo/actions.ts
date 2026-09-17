@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { imagenValida } from "@/lib/validation";
+import { borrarImagenStorage } from "@/lib/storage";
 
 async function subirImagen(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -21,9 +22,9 @@ async function subirImagen(
   return data.publicUrl;
 }
 
-// Sube la imagen nueva y la guarda como fondo de todo el sitio. No borra
-// la anterior del storage (igual que el resto de imágenes del admin) —
-// simplemente deja de estar referenciada.
+// Sube la imagen nueva y la guarda como fondo de todo el sitio. Borra la
+// anterior del storage una vez guardada la nueva, para no dejarla
+// ocupando espacio sin que nada la use ya.
 export async function actualizarFondo(formData: FormData) {
   const supabase = await createClient();
   await requireAdmin(supabase);
@@ -33,20 +34,28 @@ export async function actualizarFondo(formData: FormData) {
     throw new Error("Selecciona una imagen para subir.");
   }
 
+  const { data: actual } = await supabase.from("informacion").select("fondo_url").eq("id", 1).single();
+
   const { error } = await supabase.from("informacion").update({ fondo_url: fondoNuevo }).eq("id", 1);
   if (error) throw new Error(error.message);
+
+  await borrarImagenStorage(supabase, actual?.fondo_url);
 
   revalidatePath("/", "layout");
 }
 
 // Vuelve al mármol de siempre (fondo-claro.webp) — borra el fondo
-// personalizado de la base de datos.
+// personalizado de la base de datos y del storage.
 export async function restaurarFondoOriginal() {
   const supabase = await createClient();
   await requireAdmin(supabase);
 
+  const { data: actual } = await supabase.from("informacion").select("fondo_url").eq("id", 1).single();
+
   const { error } = await supabase.from("informacion").update({ fondo_url: null }).eq("id", 1);
   if (error) throw new Error(error.message);
+
+  await borrarImagenStorage(supabase, actual?.fondo_url);
 
   revalidatePath("/", "layout");
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, imagenValida } from "@/lib/validation";
+import { borrarImagenStorage } from "@/lib/storage";
 
 async function subirImagen(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -57,6 +58,10 @@ export async function actualizarInformacion(formData: FormData) {
 
   const { error } = await supabase.from("informacion").update(campos).eq("id", 1);
   if (error) throw new Error(error.message);
+
+  if (fotoNueva && fotoActual) {
+    await borrarImagenStorage(supabase, fotoActual);
+  }
 
   revalidatePath("/admin/informacion");
   revalidatePath("/");

@@ -27,7 +27,7 @@ const MOBILE_BREAKPOINT = "(max-width: 767px)";
 // de celular se alcanzaba a ver un instante de fondo negro (o el video
 // equivocado) mientras tanto.
 const FONDO_FINAL_DESKTOP = "/images/dimesa-hero-final-poster.jpg";
-const FONDO_FINAL_MOBILE = "/images/dimesa-hero-vertical-poster.jpg";
+const FONDO_FINAL_MOBILE = "/images/dimesa-hero-vertical-poster-v2.jpg";
 
 export function LandingClient() {
   const [revealed, setRevealed] = useState(false);

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, precioValido, enumValido, imagenValida } from "@/lib/validation";
+import { borrarImagenStorage } from "@/lib/storage";
 import type { Categoria } from "@/lib/types";
 
 const CATEGORIAS_VALIDAS: readonly Categoria[] = ["capilar", "facial", "corporal", "masajes"];
@@ -60,6 +61,10 @@ export async function actualizarServicio(id: string, formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(error.message);
 
+  if (imagenNueva && imagenActual) {
+    await borrarImagenStorage(supabase, imagenActual);
+  }
+
   revalidatePath("/admin/servicios");
   revalidatePath("/reservas");
 }
@@ -67,8 +72,9 @@ export async function actualizarServicio(id: string, formData: FormData) {
 export async function eliminarServicio(id: string) {
   const supabase = await createClient();
   await requireAdmin(supabase);
-  const { error } = await supabase.from("servicios").delete().eq("id", id);
+  const { data, error } = await supabase.from("servicios").delete().eq("id", id).select("imagen_url").single();
   if (error) throw new Error(error.message);
+  await borrarImagenStorage(supabase, data?.imagen_url);
   revalidatePath("/admin/servicios");
   revalidatePath("/reservas");
 }
