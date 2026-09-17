@@ -24,10 +24,9 @@ interface CrearPedidoInput {
 // pedido nace "pagado". Con transferencia no hay forma de confirmar el
 // depósito automáticamente — el pedido nace "pendiente" hasta que el
 // admin revise el comprobante que el cliente envía por WhatsApp.
-// TODO (Etapa 4 — pago real con PayPhone): antes de cobrar de verdad,
-// recalcular cada precio contra la tabla "productos" en vez de confiar
-// en el precio que manda el carrito, y solo insertar el pedido como
-// "pagado" después de confirmar el cobro contra la API de PayPhone.
+// TODO (Etapa 4 — pago real con PayPhone): con tarjeta, todavía no se
+// cobra de verdad — falta llamar a la API de PayPhone y solo guardar el
+// pedido como "pagado" después de confirmar ese cobro.
 export async function crearPedido(input: CrearPedidoInput) {
   const nombre = requerido(input.nombre, "Nombre");
   const correo = requerido(input.correo, "Correo");
@@ -48,12 +47,44 @@ export async function crearPedido(input: CrearPedidoInput) {
     throw new Error("El carrito está vacío.");
   }
 
-  const total = input.lineas.reduce((sum, l) => sum + l.precio * l.cantidad, 0);
+  const supabase = createServiceRoleClient();
+
+  // Nunca se confía en el nombre/precio que manda el navegador — alguien
+  // podría cambiarlos desde las herramientas de desarrollador antes de
+  // enviar el pedido y pagar menos de lo real. Se vuelve a consultar cada
+  // producto en la base de datos y el pedido se arma solo con esos
+  // valores verificados.
+  const idsUnicos = [...new Set(input.lineas.map((l) => l.producto_id))];
+  const { data: productosReales, error: errorProductos } = await supabase
+    .from("productos")
+    .select("id, nombre, precio, disponible")
+    .in("id", idsUnicos);
+
+  if (errorProductos) {
+    console.error("Error al verificar productos del pedido:", errorProductos);
+    throw new Error("No pudimos verificar tu pedido en este momento. Intenta de nuevo.");
+  }
+
+  const productoPorId = new Map((productosReales ?? []).map((p) => [p.id, p]));
+
+  const lineasVerificadas: LineaPedido[] = input.lineas.map((l) => {
+    const real = productoPorId.get(l.producto_id);
+    if (!real || !real.disponible) {
+      throw new Error(`"${l.nombre}" ya no está disponible. Quítalo del carrito e intenta de nuevo.`);
+    }
+    return {
+      producto_id: real.id,
+      nombre: real.nombre,
+      precio: real.precio,
+      cantidad: Math.max(1, Math.round(l.cantidad)),
+    };
+  });
+
+  const total = lineasVerificadas.reduce((sum, l) => sum + l.precio * l.cantidad, 0);
   if (!Number.isFinite(total) || total <= 0) {
     throw new Error("El total del pedido no es válido.");
   }
 
-  const supabase = createServiceRoleClient();
   const { error } = await supabase.from("pedidos").insert({
     cliente_nombre: nombre,
     cliente_email: correo,
@@ -62,7 +93,7 @@ export async function crearPedido(input: CrearPedidoInput) {
     cliente_ciudad: ciudad,
     cliente_direccion: direccion,
     cliente_referencia: referencia,
-    productos: input.lineas,
+    productos: lineasVerificadas,
     total: Math.round(total * 100) / 100,
     estado: input.metodoPago === "transferencia" ? "pendiente" : "pagado",
     estado_envio: "pendiente",
