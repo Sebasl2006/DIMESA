@@ -94,11 +94,18 @@ async function verificarYCalcular(input: DatosPedidoInput) {
   };
 }
 
+// En producción SIEMPRE se usa el dominio real fijo — nunca el header
+// "Host" de la petición, que en teoría alguien podría falsificar con una
+// petición hecha a mano (no desde el navegador) para intentar que Payphone
+// redirija el pago a otro dominio. Solo en desarrollo local se arma la URL
+// a partir del host de la petición, para poder probar en el puerto que sea.
 async function obtenerBaseUrl() {
+  if (process.env.NODE_ENV === "production") {
+    return "https://dimesaspa.com";
+  }
   const h = await headers();
-  const host = h.get("host") ?? "dimesaspa.com";
-  const esLocal = host.startsWith("localhost") || host.startsWith("127.0.0.1");
-  return `${esLocal ? "http" : "https"}://${host}`;
+  const host = h.get("host") ?? "localhost:3000";
+  return `http://${host}`;
 }
 
 // Guarda el pedido usando la service_role key (ignora RLS) — es la única
@@ -168,16 +175,22 @@ export async function iniciarPagoTarjeta(input: DatosPedidoInput): Promise<{ url
   }
 
   const baseUrl = await obtenerBaseUrl();
-  const { payWithCard } = await prepararPagoPayphone({
-    montoCentavos: Math.round(datos.total * 100),
-    clientTransactionId,
-    referencia: `Pedido Dimesa - ${datos.nombre}`,
-    correo: datos.correo,
-    responseUrl: `${baseUrl}/productos/checkout/confirmar`,
-    cancellationUrl: `${baseUrl}/productos/checkout`,
-  });
-
-  return { url: payWithCard };
+  try {
+    const { payWithCard } = await prepararPagoPayphone({
+      montoCentavos: Math.round(datos.total * 100),
+      clientTransactionId,
+      referencia: `Pedido Dimesa - ${datos.nombre}`,
+      correo: datos.correo,
+      responseUrl: `${baseUrl}/productos/checkout/confirmar`,
+      cancellationUrl: `${baseUrl}/productos/checkout`,
+    });
+    return { url: payWithCard };
+  } catch (err) {
+    // Si Payphone no pudo preparar el pago, no dejamos el pedido "aparcado"
+    // dando vueltas sin ningún pago asociado.
+    await supabase.from("pedidos_pendientes").delete().eq("client_transaction_id", clientTransactionId);
+    throw err;
+  }
 }
 
 interface ResultadoConfirmacion {
@@ -221,6 +234,16 @@ export async function confirmarPagoTarjeta(id: number, clientTxId: string): Prom
     return { ok: false, mensaje: "Tu pago fue cancelado o no se aprobó. Puedes intentar de nuevo." };
   }
 
+  if (confirmacion.clientTransactionId !== clientTxId) {
+    // Payphone confirmó una transacción distinta a la que esperábamos —
+    // no debería pasar nunca, pero si pasa, no se guarda nada solo.
+    console.error("clientTransactionId de Payphone no coincide:", { esperado: clientTxId, recibido: confirmacion.clientTransactionId });
+    return {
+      ok: false,
+      mensaje: "Hubo un problema verificando tu pago. Escríbenos por WhatsApp con tu comprobante.",
+    };
+  }
+
   const totalEsperadoCentavos = Math.round(Number(pendiente.total) * 100);
   if (confirmacion.montoCentavos !== totalEsperadoCentavos) {
     // El monto que Payphone dice haber cobrado no coincide con lo que
@@ -236,24 +259,41 @@ export async function confirmarPagoTarjeta(id: number, clientTxId: string): Prom
     };
   }
 
+  // Reclamo atómico: si dos peticiones llegan a la vez para el mismo pago
+  // (ej. alguien recarga la página de confirmación, o la vuelve a abrir),
+  // ambas podrían pasar las validaciones de arriba antes de que cualquiera
+  // termine. Este delete-con-select solo puede "ganarlo" una de las dos —
+  // la otra recibe un arreglo vacío y no llega a duplicar el pedido pagado.
+  const { data: reclamado } = await supabase
+    .from("pedidos_pendientes")
+    .delete()
+    .eq("client_transaction_id", clientTxId)
+    .select()
+    .maybeSingle();
+
+  if (!reclamado) {
+    return {
+      ok: false,
+      mensaje: "Tu pedido ya fue procesado. Si no ves la confirmación, escríbenos por WhatsApp con tu comprobante.",
+    };
+  }
+
   const { error } = await supabase.from("pedidos").insert({
-    cliente_nombre: pendiente.cliente_nombre,
-    cliente_email: pendiente.cliente_email,
-    cliente_telefono: pendiente.cliente_telefono,
-    cliente_provincia: pendiente.cliente_provincia,
-    cliente_ciudad: pendiente.cliente_ciudad,
-    cliente_direccion: pendiente.cliente_direccion,
-    cliente_referencia: pendiente.cliente_referencia,
-    productos: pendiente.productos,
-    cargo_envio: pendiente.cargo_envio,
-    total: pendiente.total,
+    cliente_nombre: reclamado.cliente_nombre,
+    cliente_email: reclamado.cliente_email,
+    cliente_telefono: reclamado.cliente_telefono,
+    cliente_provincia: reclamado.cliente_provincia,
+    cliente_ciudad: reclamado.cliente_ciudad,
+    cliente_direccion: reclamado.cliente_direccion,
+    cliente_referencia: reclamado.cliente_referencia,
+    productos: reclamado.productos,
+    cargo_envio: reclamado.cargo_envio,
+    total: reclamado.total,
     estado: "pagado",
     estado_envio: "pendiente",
     metodo_pago: "tarjeta",
     payphone_transaction_id: confirmacion.transactionId,
   });
-
-  await supabase.from("pedidos_pendientes").delete().eq("client_transaction_id", clientTxId);
 
   if (error) {
     console.error("Error al guardar pedido pagado con Payphone:", error);

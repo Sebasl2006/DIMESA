@@ -64,6 +64,7 @@ interface ConfirmacionPagoPayphone {
   aprobado: boolean;
   montoCentavos: number;
   transactionId: number;
+  clientTransactionId: string;
 }
 
 export async function confirmarPagoPayphone(id: number, clientTxId: string): Promise<ConfirmacionPagoPayphone> {
@@ -88,5 +89,6 @@ export async function confirmarPagoPayphone(id: number, clientTxId: string): Pro
     aprobado: data.transactionStatus === "Approved",
     montoCentavos: Number(data.amount),
     transactionId: Number(data.transactionId),
+    clientTransactionId: String(data.clientTransactionId ?? ""),
   };
 }
