@@ -316,6 +316,7 @@ export function LandingClient() {
         />
 
         <div
+          className="dimesa-hero-content"
           style={{
             position: "relative",
             zIndex: 2,
@@ -324,7 +325,9 @@ export function LandingClient() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            padding: "6vh 24px",
+            paddingLeft: "24px",
+            paddingRight: "24px",
+            paddingBottom: "6vh",
             boxSizing: "border-box",
           }}
         >
@@ -405,12 +408,18 @@ export function LandingClient() {
         .dimesa-hero-bg-desktop {
           display: none;
         }
+        .dimesa-hero-content {
+          padding-top: 34vh;
+        }
         @media (min-width: 768px) {
           .dimesa-hero-bg-mobile {
             display: none;
           }
           .dimesa-hero-bg-desktop {
             display: block;
+          }
+          .dimesa-hero-content {
+            padding-top: 6vh;
           }
         }
       `}</style>
