@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Producto } from "@/lib/types";
+
+const CART_STORAGE_KEY = "dimesa-carrito";
 
 export interface CartLine {
   producto: Producto;
@@ -25,13 +27,35 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-// Carrito en memoria del lado del cliente (sin base de datos hasta el
-// checkout, como pide el diseño original). Vive en este layout de
-// /productos, así que se mantiene entre la selección de marca, el grid
-// filtrado y el checkout, pero se reinicia si se recarga la página.
+// Carrito del lado del cliente (sin base de datos hasta el checkout, como
+// pide el diseño original). Se guarda en localStorage porque el pago con
+// tarjeta (Payphone) redirige fuera del sitio y de vuelta — sin esto, el
+// carrito se perdía cada vez que alguien cancelaba o volvía de un pago.
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const yaCargado = useRef(false);
+
+  useEffect(() => {
+    try {
+      const guardado = window.localStorage.getItem(CART_STORAGE_KEY);
+      if (guardado) setCart(JSON.parse(guardado));
+    } catch {
+      // localStorage puede fallar (modo privado, etc.) — el carrito
+      // simplemente empieza vacío, no es un error que deba interrumpir nada.
+    } finally {
+      yaCargado.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!yaCargado.current) return;
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    } catch {
+      // Ver comentario arriba.
+    }
+  }, [cart]);
 
   const addToCart = (producto: Producto) =>
     setCart((c) => ({

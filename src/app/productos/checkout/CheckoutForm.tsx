@@ -4,7 +4,7 @@ import { useState, type ChangeEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import { useCart } from "../CartContext";
 import { ImageSlot } from "@/components/ImageSlot";
-import { crearPedido } from "./actions";
+import { crearPedido, iniciarPagoTarjeta } from "./actions";
 import { CARGO_ENVIO_DOMICILIO } from "@/lib/constants";
 import type { CuentaBancaria } from "@/lib/types";
 
@@ -117,33 +117,38 @@ export function CheckoutForm({ direccionLocal, cuentasBancarias = [] }: Checkout
     }
     setFormError("");
     setSubmitting(true);
+
+    const datosPedido = {
+      nombre: form.nombre,
+      correo: form.correo,
+      telefono: form.telefono,
+      entrega: form.entrega,
+      provincia: form.provincia,
+      ciudad: form.ciudad,
+      direccion: form.direccion,
+      referencia: form.referencia,
+      lineas: cartLines.map((l) => ({
+        producto_id: l.producto.id,
+        nombre: l.producto.nombre,
+        precio: l.producto.precio,
+        cantidad: l.qty,
+      })),
+    };
+
     try {
-      // TODO (Etapa 4): antes de guardar como "pagado" de verdad, cobrar
-      // primero con PayPhone y confirmar el resultado del pago. Por ahora
-      // el pedido se guarda real en Supabase con estado "pendiente"; el
-      // cobro sigue simulado.
-      await crearPedido({
-        nombre: form.nombre,
-        correo: form.correo,
-        telefono: form.telefono,
-        entrega: form.entrega,
-        provincia: form.provincia,
-        ciudad: form.ciudad,
-        direccion: form.direccion,
-        referencia: form.referencia,
-        metodoPago: pago,
-        lineas: cartLines.map((l) => ({
-          producto_id: l.producto.id,
-          nombre: l.producto.nombre,
-          precio: l.producto.precio,
-          cantidad: l.qty,
-        })),
-      });
-      setOrderComplete(true);
-      clearCart();
+      if (esTransferencia) {
+        await crearPedido(datosPedido);
+        setOrderComplete(true);
+        clearCart();
+      } else {
+        // El pedido todavía no se guarda: Payphone redirige a su formulario
+        // de pago y, si se aprueba, vuelve a /productos/checkout/confirmar,
+        // que es donde recién se crea el pedido como "pagado".
+        const { url } = await iniciarPagoTarjeta(datosPedido);
+        window.location.href = url;
+      }
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "No se pudo guardar el pedido. Intenta de nuevo.");
-    } finally {
+      setFormError(err instanceof Error ? err.message : "No se pudo procesar el pago. Intenta de nuevo.");
       setSubmitting(false);
     }
   };
