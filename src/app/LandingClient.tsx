@@ -371,13 +371,13 @@ export function LandingClient() {
               botones — pegados a un % fijo del alto total — quedaban
               montados encima del subtítulo "CUENCA · ECUADOR". */}
           <div
+            className="dimesa-hero-nav"
             style={{
               flex: 1,
               width: "100%",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              justifyContent: "center",
               gap: "20px",
             }}
           >
@@ -409,7 +409,11 @@ export function LandingClient() {
           display: none;
         }
         .dimesa-hero-content {
-          padding-top: 34vh;
+          padding-top: 22vh;
+        }
+        .dimesa-hero-nav {
+          justify-content: flex-start;
+          padding-top: 36px;
         }
         @media (min-width: 768px) {
           .dimesa-hero-bg-mobile {
@@ -420,6 +424,10 @@ export function LandingClient() {
           }
           .dimesa-hero-content {
             padding-top: 6vh;
+          }
+          .dimesa-hero-nav {
+            justify-content: center;
+            padding-top: 0;
           }
         }
       `}</style>
