@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, precioValido, imagenValida, slugificar } from "@/lib/validation";
-import { borrarImagenStorage } from "@/lib/storage";
+import { borrarImagenStorage, borrarImagenesStorage } from "@/lib/storage";
 
 async function subirImagen(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -45,6 +45,47 @@ async function crearMarca(
     throw new Error("No se pudo crear la marca: " + error.message);
   }
   return slug;
+}
+
+// Borra una marca completa: todos sus productos, la marca y las fotos de
+// ambos (base de datos y storage). Como no se puede deshacer, exige que
+// se escriba el nombre de la marca — se vuelve a comprobar aquí y no solo
+// en el navegador.
+export async function eliminarMarca(slug: string, nombreEscrito: string) {
+  const supabase = await createClient();
+  await requireAdmin(supabase);
+
+  const { data: marca } = await supabase.from("marcas").select("nombre, imagen_url").eq("slug", slug).maybeSingle();
+  if (!marca) throw new Error("No se encontró la marca.");
+
+  if (nombreEscrito.trim().toLowerCase() !== String(marca.nombre).trim().toLowerCase()) {
+    throw new Error("El nombre que escribiste no coincide. No se borró nada.");
+  }
+
+  const { data: productosBorrados, error: errorProductos } = await supabase
+    .from("productos")
+    .delete()
+    .eq("marca", slug)
+    .select("imagen_url");
+  if (errorProductos) throw new Error("No se pudieron borrar los productos: " + errorProductos.message);
+
+  // Las fotos se borran apenas se borran sus productos, aunque después
+  // fallara borrar la marca.
+  await borrarImagenesStorage(supabase, (productosBorrados ?? []).map((p) => p.imagen_url));
+
+  const { data: marcaBorrada, error: errorMarca } = await supabase
+    .from("marcas")
+    .delete()
+    .eq("slug", slug)
+    .select("slug");
+  if (errorMarca) throw new Error("No se pudo borrar la marca: " + errorMarca.message);
+  if (!marcaBorrada || marcaBorrada.length === 0) throw new Error("No se pudo borrar la marca.");
+
+  await borrarImagenStorage(supabase, marca.imagen_url);
+
+  revalidatePath("/admin/marcas");
+  revalidatePath("/admin/productos");
+  revalidatePath("/productos", "layout");
 }
 
 // Resuelve a qué marca (slug) queda el producto: si se eligió "+ Agregar
