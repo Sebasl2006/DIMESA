@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "./LogoutButton";
-import { IconChart, IconOrders, IconBox, IconUser, IconSparkle, IconInfo, IconImage, IconTag } from "./icons";
+import { IconChart, IconOrders, IconBox, IconUser, IconSparkle, IconInfo, IconImage } from "./icons";
 import * as s from "./admin-styles";
 
 const NAV = [
   { href: "/admin/analiticas", label: "Analíticas", Icon: IconChart },
   { href: "/admin/pedidos", label: "Pedidos", Icon: IconOrders },
   { href: "/admin/productos", label: "Productos", Icon: IconBox },
-  { href: "/admin/marcas", label: "Marcas", Icon: IconTag },
   { href: "/admin/profesionales", label: "Profesionales", Icon: IconUser },
   { href: "/admin/servicios", label: "Servicios", Icon: IconSparkle },
   { href: "/admin/informacion", label: "Información", Icon: IconInfo },

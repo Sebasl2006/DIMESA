@@ -44,13 +44,6 @@ export const IconInfo = () => (
   </svg>
 );
 
-export const IconTag = () => (
-  <svg {...common}>
-    <path d="M12.7 3.3 20 4l.7 7.3-9.5 9.5a1.5 1.5 0 0 1-2.1 0l-6.2-6.2a1.5 1.5 0 0 1 0-2.1l9.5-9.2z" />
-    <circle cx="15.5" cy="8.5" r="1.4" />
-  </svg>
-);
-
 export const IconImage = () => (
   <svg {...common}>
     <rect x="3.5" y="4.5" width="17" height="15" rx="1.6" />

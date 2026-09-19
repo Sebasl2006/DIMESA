@@ -47,35 +47,6 @@ async function crearMarca(
   return slug;
 }
 
-// Borra una marca — solo si ya no tiene productos (si los tuviera, se
-// quedarían con una "marca" que ya no existe). Antes había que borrar
-// marcas de prueba a mano con SQL directo en Supabase porque no existía
-// ninguna forma de hacerlo desde el admin.
-export async function eliminarMarca(slug: string) {
-  const supabase = await createClient();
-  await requireAdmin(supabase);
-
-  const { count } = await supabase
-    .from("productos")
-    .select("id", { count: "exact", head: true })
-    .eq("marca", slug);
-
-  if (count && count > 0) {
-    throw new Error(
-      `No se puede borrar: todavía tiene ${count} producto${count === 1 ? "" : "s"}. Bórralos o cámbiales la marca primero.`
-    );
-  }
-
-  const { data, error } = await supabase.from("marcas").delete().eq("slug", slug).select("imagen_url").single();
-  if (error) throw new Error(error.message);
-
-  await borrarImagenStorage(supabase, data?.imagen_url);
-
-  revalidatePath("/admin/marcas");
-  revalidatePath("/admin/productos");
-  revalidatePath("/productos", "layout");
-}
-
 // Resuelve a qué marca (slug) queda el producto: si se eligió "+ Agregar
 // marca nueva" en el <select>, primero la crea; si no, usa la seleccionada.
 async function resolverMarca(supabase: Awaited<ReturnType<typeof createClient>>, formData: FormData): Promise<string> {
