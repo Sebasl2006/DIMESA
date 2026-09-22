@@ -121,7 +121,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${cormorant.variable} ${montserrat.variable}`}>
+    // data-scroll-behavior: globals.css tiene scroll-behavior: smooth en
+    // <html>; con este atributo Next.js lo desactiva solo durante el cambio
+    // de página, para que al navegar no se vea un desplazamiento animado
+    // hacia arriba (se siente como un tirón) sin perder el scroll suave de
+    // los enlaces internos (#capilar, #top...).
+    <html lang="es" data-scroll-behavior="smooth" className={`${cormorant.variable} ${montserrat.variable}`}>
       <body>
         {children}
         <script

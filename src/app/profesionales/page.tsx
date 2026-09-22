@@ -75,7 +75,7 @@ export default async function ProfesionalesPage() {
                     }}
                   >
                     <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", position: "relative" }}>
-                      <ImageSlot src={p.foto_url} alt={p.nombre} placeholder={p.nombre} sizes="350px" />
+                      <ImageSlot src={p.foto_url} alt={p.nombre} placeholder={p.nombre} sizes="350px" eager />
                     </div>
                   </div>
 

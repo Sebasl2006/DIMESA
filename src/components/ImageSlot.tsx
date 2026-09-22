@@ -15,6 +15,10 @@ interface ImageSlotProps {
   // realmente necesita en grids de tarjetas angostas, y eso se ve borroso.
   sizes?: string;
   quality?: number;
+  // true para las fotos que se ven apenas abre la página (sin hacer scroll):
+  // el navegador las baja de inmediato y con prioridad alta, en vez de
+  // esperar a que las "descubra" y las trate como cualquier otra imagen.
+  eager?: boolean;
 }
 
 // Reemplaza una foto real cuando el producto/servicio todavía no tiene
@@ -30,6 +34,7 @@ export function ImageSlot({
   // grandes (ej. Revlon, +150 productos) esto es lo que más nota el
   // cliente mientras baja por la página.
   quality = 75,
+  eager = false,
 }: ImageSlotProps) {
   const [cargada, setCargada] = useState(false);
 
@@ -49,6 +54,8 @@ export function ImageSlot({
           alt={alt}
           fill
           quality={quality}
+          loading={eager ? "eager" : undefined}
+          fetchPriority={eager ? "high" : undefined}
           style={{
             objectFit: "cover",
             opacity: cargada ? 1 : 0,

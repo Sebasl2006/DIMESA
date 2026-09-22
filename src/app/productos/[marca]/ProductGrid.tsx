@@ -19,7 +19,7 @@ export function ProductGrid({ productos }: { productos: Producto[] }) {
 
   return (
     <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "0 24px 100px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "32px" }}>
-      {productos.map((p) => (
+      {productos.map((p, i) => (
         <div
           key={p.id}
           className="product-card"
@@ -31,6 +31,8 @@ export function ProductGrid({ productos }: { productos: Producto[] }) {
               alt={p.nombre}
               placeholder={p.nombre}
               sizes="(max-width: 480px) 95vw, (max-width: 1024px) 60vw, 560px"
+              // Solo la primera fila: el resto sigue cargándose al hacer scroll.
+              eager={i < 4}
             />
           </div>
           {/* Fondo sólido detrás del texto: sin esto, el texto queda flotando

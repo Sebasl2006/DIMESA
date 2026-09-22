@@ -50,7 +50,7 @@ export default async function ProductosPage() {
               const m = marcaMeta.get(slug)!;
               return (
                 <Link key={slug} href={`/productos/${slug}`} className="brand-card">
-                  <ImageSlot src={m.imagen_url} alt={m.nombre} placeholder="" style={{ position: "absolute", inset: 0 }} />
+                  <ImageSlot src={m.imagen_url} alt={m.nombre} placeholder="" eager style={{ position: "absolute", inset: 0 }} />
                   <div
                     className="brand-card-overlay"
                     style={{ position: "absolute", inset: 0, background: "rgba(11,10,9,0.3)" }}

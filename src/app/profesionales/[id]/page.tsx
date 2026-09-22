@@ -122,7 +122,7 @@ export default async function ProfesionalDetallePage({ params }: { params: Promi
               }}
             >
               <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", position: "relative" }}>
-                <ImageSlot src={p.foto_url} alt={p.nombre} placeholder={p.nombre} sizes="420px" />
+                <ImageSlot src={p.foto_url} alt={p.nombre} placeholder={p.nombre} sizes="420px" eager />
               </div>
             </div>
           </div>

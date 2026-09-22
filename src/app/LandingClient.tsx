@@ -5,13 +5,17 @@ import Image from "next/image";
 import Link from "next/link";
 
 // Solo se reproduce el video de entrada en computadora, laptop o tablet, y
-// solo la primera vez que alguien llega a esta pestaña — en celular NUNCA
-// se reproduce (ver esCelular más abajo), se entra directo al logo y los
-// botones. Si en computadora/tablet ya se vio y la persona navega a otra
-// sección (Reservas, Productos...) y vuelve al inicio, también se salta
-// directo — sessionStorage se borra al cerrar la pestaña, así que en una
-// visita nueva sí se reproduce.
-const INTRO_KEY = "dimesa-intro-vista";
+// una vez por cada carga de la página — en celular NUNCA se reproduce (ver
+// esCelular más abajo), se entra directo al logo y los botones.
+//
+// Esta variable vive en memoria mientras la pestaña no se recargue: si la
+// persona navega a otra sección (Reservas, Productos...) y vuelve al inicio
+// SIN recargar, se salta directo; pero recargar (F5), abrir el sitio en una
+// pestaña nueva o escribir la dirección otra vez sí vuelve a mostrar el
+// video. Antes se guardaba una marca en sessionStorage apenas arrancaba, y
+// esa marca sobrevivía a las recargas: quien probaba un cambio recargando
+// la página veía que "el video ya no se reproducía" aunque estuviera bien.
+let introMostradaEnEstaCarga = false;
 
 // Mismo punto de corte que la regla @media de aquí abajo (dimesa-hero-bg-*)
 // — tiene que ser el mismo número en los dos lados, o JS y CSS podrían no
@@ -57,12 +61,16 @@ export function LandingClient() {
 
   const reveal = () => {
     if (!revealed) setRevealed(true);
-    try {
-      sessionStorage.setItem(INTRO_KEY, "1");
-    } catch {
-      // Almacenamiento no disponible (modo privado, etc.) — sin problema,
-      // simplemente se repite la intro en la próxima visita.
-    }
+  };
+
+  // El video no arrancó o falló (autoplay bloqueado por el navegador,
+  // conexión muy lenta, error de carga): se quita el <video> y se muestra
+  // el menú sobre la foto final — mejor eso que dejar a la persona mirando
+  // un primer cuadro congelado. Quitar el <video> es importante: si se
+  // quedara montado, su imagen "poster" taparía la foto de fondo.
+  const saltarIntro = () => {
+    setMostrarVideo(false);
+    setRevealed(true);
   };
 
   // Red de seguridad definitiva: un toque en la pantalla SIEMPRE cuenta
@@ -80,7 +88,7 @@ export function LandingClient() {
       video.play()?.catch(() => {});
     }
     window.setTimeout(() => {
-      if (!videoRef.current || videoRef.current.paused) reveal();
+      if (!videoRef.current || videoRef.current.paused) saltarIntro();
     }, 400);
   };
 
@@ -105,14 +113,7 @@ export function LandingClient() {
       return;
     }
 
-    let yaVista = false;
-    try {
-      yaVista = sessionStorage.getItem(INTRO_KEY) === "1";
-    } catch {
-      // Sin acceso a sessionStorage — se trata como primera vez.
-    }
-
-    if (yaVista) {
+    if (introMostradaEnEstaCarga) {
       setRevealed(true);
       return;
     }
@@ -120,11 +121,7 @@ export function LandingClient() {
     // Se marca como "vista" apenas arranca (no solo cuando termina) — si
     // la persona se va a otra sección antes de que acabe el video y luego
     // vuelve al inicio, ya no debe repetirse desde cero.
-    try {
-      sessionStorage.setItem(INTRO_KEY, "1");
-    } catch {
-      // Sin acceso a sessionStorage — sin problema, ver comentario arriba.
-    }
+    introMostradaEnEstaCarga = true;
 
     setMostrarVideo(true);
   }, []);
@@ -134,13 +131,18 @@ export function LandingClient() {
     const video = videoRef.current;
     if (!video) return;
 
-    // Red de seguridad: si el video se traba de verdad (conexión lenta,
-    // modo de bajo consumo, o un navegador que ni siquiera avisa el error)
-    // esto igual revela el menú pasado un tiempo bien por encima de lo que
-    // dura el video (~10s) — para no cortarlo a la mitad en el caso
-    // normal. Además, cualquier toque en la pantalla (ver handleTapHero)
-    // lo destraba al instante sin tener que esperar esto.
-    const maxWaitTimer = setTimeout(reveal, 20000);
+    // Redes de seguridad, de la más rápida a la más lenta:
+    // - Si a los 8s el video todavía no arrancó nada (conexión muy lenta o
+    //   un navegador que se queda esperando sin avisar), se salta la intro.
+    // - Si por alguna razón sigue trabado a los 20s (bien por encima de lo
+    //   que dura el video, ~10s, para no cortarlo a la mitad en el caso
+    //   normal), también.
+    // Además, cualquier toque en la pantalla (ver handleTapHero) lo
+    // destraba al instante sin tener que esperar esto.
+    const arranqueTimer = setTimeout(() => {
+      if (video.currentTime === 0) saltarIntro();
+    }, 8000);
+    const maxWaitTimer = setTimeout(saltarIntro, 20000);
 
     // Arrancar en silencio es lo único que los navegadores garantizan sin
     // necesitar que la persona ya haya interactuado con la página. Se
@@ -155,9 +157,13 @@ export function LandingClient() {
     // hasta que quede realmente reproduciendo.
     const intentarReproducir = () => {
       if (!video.paused) return;
-      video.play()?.catch(() => {
-        // No arrancó todavía — se reintenta con el próximo evento, o
-        // como último recurso, revela el menú el temporizador de arriba.
+      video.play()?.catch((err) => {
+        // NotAllowedError: el navegador (o el modo de ahorro de energía) no
+        // deja arrancar el video solo — reintentar no sirve de nada, así que
+        // se pasa directo al menú en vez de dejar la pantalla congelada.
+        // Cualquier otro rechazo (ej. todavía cargando) se reintenta con el
+        // próximo evento, o lo cubren los temporizadores de arriba.
+        if (err && err.name === "NotAllowedError") saltarIntro();
       });
     };
     intentarReproducir();
@@ -166,6 +172,7 @@ export function LandingClient() {
     video.addEventListener("canplaythrough", intentarReproducir);
 
     return () => {
+      clearTimeout(arranqueTimer);
       clearTimeout(maxWaitTimer);
       video.removeEventListener("loadeddata", intentarReproducir);
       video.removeEventListener("canplay", intentarReproducir);
@@ -218,7 +225,9 @@ export function LandingClient() {
           alt=""
           fill
           priority
-          sizes="100vw"
+          // La capa que queda oculta por CSS declara 1px: así el navegador
+          // baja solo la versión diminuta de esa foto en vez de la completa.
+          sizes="(min-width: 768px) 1px, 100vw"
           className="dimesa-hero-bg dimesa-hero-bg-mobile"
           style={{ objectFit: "cover", zIndex: 0 }}
         />
@@ -227,7 +236,7 @@ export function LandingClient() {
           alt=""
           fill
           priority
-          sizes="100vw"
+          sizes="(max-width: 767px) 1px, 100vw"
           className="dimesa-hero-bg dimesa-hero-bg-desktop"
           style={{ objectFit: "cover", zIndex: 0 }}
         />
@@ -242,7 +251,7 @@ export function LandingClient() {
             playsInline
             preload="auto"
             onEnded={reveal}
-            onError={reveal}
+            onError={saltarIntro}
             style={{
               position: "absolute",
               inset: 0,

@@ -143,7 +143,7 @@ export default async function InformacionPage() {
             </Reveal>
             <Reveal delay={0.15} style={{ flex: 1, minWidth: "300px" }}>
               <div style={{ width: "100%", aspectRatio: "4 / 5" }}>
-                <ImageSlot src={info?.foto_url} alt="Salón Dimesa" placeholder="Fotografía del salón Dimesa" />
+                <ImageSlot src={info?.foto_url} alt="Salón Dimesa" placeholder="Fotografía del salón Dimesa" eager />
               </div>
             </Reveal>
           </div>
