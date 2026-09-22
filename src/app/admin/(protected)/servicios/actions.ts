@@ -58,7 +58,7 @@ export async function crearServicio(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/servicios");
-  revalidatePath("/reservas");
+  revalidatePath("/reservas", "layout");
 }
 
 export async function actualizarServicio(id: string, formData: FormData) {
@@ -80,7 +80,7 @@ export async function actualizarServicio(id: string, formData: FormData) {
   }
 
   revalidatePath("/admin/servicios");
-  revalidatePath("/reservas");
+  revalidatePath("/reservas", "layout");
 }
 
 export async function eliminarServicio(id: string) {
@@ -90,5 +90,5 @@ export async function eliminarServicio(id: string) {
   if (error) throw new Error(error.message);
   await borrarImagenStorage(supabase, data?.imagen_url);
   revalidatePath("/admin/servicios");
-  revalidatePath("/reservas");
+  revalidatePath("/reservas", "layout");
 }

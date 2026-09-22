@@ -36,6 +36,25 @@ export async function createClient() {
   );
 }
 
+// Cliente de solo lectura para las páginas PÚBLICAS (catálogo, servicios,
+// profesionales, fondo...): usa la llave anónima y NO lee cookies. Leer
+// cookies (como hace createClient) obliga a Next.js a generar la página de
+// nuevo en el servidor en cada visita, aunque no dependa de ningún usuario
+// — eso era lo que hacía lenta la apertura de cada sección. Sin cookies,
+// la página se genera una vez, se guarda y se sirve al instante (ver
+// "revalidate" en cada página). Ve exactamente lo mismo que ve un visitante
+// cualquiera: las mismas reglas RLS que ya protegen la base de datos.
+export function createPublicClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: fetchWithTimeout() },
+    }
+  );
+}
+
 // Cliente con la service_role key: ignora RLS por completo.
 // Úsalo SOLO en código de servidor (route handlers) que ya validó
 // lo que va a escribir — nunca lo importes en un componente cliente.

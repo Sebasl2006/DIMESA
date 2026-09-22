@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import { ImageSlot } from "@/components/ImageSlot";
 
 // Las marcas viven en la tabla "marcas" (nombre + foto de fondo del cuadro),
@@ -23,8 +23,12 @@ function agruparEnFilas(n: number): number[] {
   return Array.from({ length: filas }, (_, i) => base + (i >= filas - resto ? 1 : 0));
 }
 
+// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
+// al instante cuando se guarda un cambio desde el admin (revalidatePath).
+export const revalidate = 60;
+
 export default async function ProductosPage() {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const [{ data: productosData }, { data: marcasData }] = await Promise.all([
     supabase.from("productos").select("marca").eq("disponible", true),
     supabase.from("marcas").select("slug, nombre, imagen_url").order("created_at", { ascending: true }),

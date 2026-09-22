@@ -1,12 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type { Profesional } from "@/lib/types";
 import { ImageSlot } from "@/components/ImageSlot";
 import { FondoLayer } from "@/components/FondoLayer";
 
+// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
+// al instante cuando se guarda un cambio desde el admin (revalidatePath).
+export const revalidate = 60;
+
 export default async function ProfesionalesPage() {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data: profesionales } = await supabase
     .from("profesionales")
     .select("*")

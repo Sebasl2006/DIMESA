@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type { Profesional } from "@/lib/types";
 import { ImageSlot } from "@/components/ImageSlot";
 import { FondoLayer } from "@/components/FondoLayer";
@@ -21,9 +21,18 @@ function bioAutomatica(p: Profesional): string {
   return `${intro} ${credenciales.join(", ")}.`;
 }
 
+// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
+// al instante cuando se guarda un cambio desde el admin (revalidatePath).
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const { data } = await createPublicClient().from("profesionales").select("id").eq("disponible", true);
+  return (data ?? []).map((p) => ({ id: p.id as string }));
+}
+
 export default async function ProfesionalDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data } = await supabase.from("profesionales").select("*").eq("id", id).single();
 
   if (!data) notFound();
@@ -152,7 +161,7 @@ export default async function ProfesionalDetallePage({ params }: { params: Promi
 
           <div style={{ marginTop: "44px" }}>
             <Link
-              href={`/reservas?profesional=${p.id}`}
+              href={`/reservas/${p.id}`}
               style={{
                 display: "inline-block",
                 fontFamily: "var(--font-montserrat), sans-serif",

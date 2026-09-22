@@ -44,7 +44,8 @@ export async function crearProfesional(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/profesionales");
-  revalidatePath("/profesionales");
+  revalidatePath("/profesionales", "layout");
+  revalidatePath("/reservas", "layout");
 }
 
 export async function actualizarProfesional(id: string, formData: FormData) {
@@ -65,8 +66,8 @@ export async function actualizarProfesional(id: string, formData: FormData) {
   }
 
   revalidatePath("/admin/profesionales");
-  revalidatePath("/profesionales");
-  revalidatePath(`/profesionales/${id}`);
+  revalidatePath("/profesionales", "layout");
+  revalidatePath("/reservas", "layout");
 }
 
 export async function eliminarProfesional(id: string) {
@@ -91,6 +92,6 @@ export async function eliminarProfesional(id: string) {
 
   revalidatePath("/admin/profesionales");
   revalidatePath("/admin/servicios");
-  revalidatePath("/reservas");
-  revalidatePath("/profesionales");
+  revalidatePath("/profesionales", "layout");
+  revalidatePath("/reservas", "layout");
 }

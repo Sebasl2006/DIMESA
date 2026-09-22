@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type { Informacion } from "@/lib/types";
 import { ImageSlot } from "@/components/ImageSlot";
 import { Reveal } from "@/components/Reveal";
@@ -49,8 +49,12 @@ const bodyText = {
   color: "#8a8580",
 } as const;
 
+// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
+// al instante cuando se guarda un cambio desde el admin (revalidatePath).
+export const revalidate = 60;
+
 export default async function InformacionPage() {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data } = await supabase.from("informacion").select("*").eq("id", 1).single();
   const info = data as Informacion | null;
 

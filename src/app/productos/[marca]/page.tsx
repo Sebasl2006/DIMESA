@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type { Producto } from "@/lib/types";
 import { ProductGrid } from "./ProductGrid";
 import { VideoHero } from "@/components/VideoHero";
@@ -52,9 +52,20 @@ const MARCA_OVERLAY: Partial<Record<string, { titulo: string; texto: string }>> 
   },
 };
 
+// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
+// al instante cuando se guarda un cambio desde el admin (revalidatePath).
+export const revalidate = 60;
+
+// Las marcas que ya existen se generan de antemano; una marca nueva creada
+// desde el admin se genera en su primera visita y desde ahí queda guardada.
+export async function generateStaticParams() {
+  const { data } = await createPublicClient().from("marcas").select("slug");
+  return (data ?? []).map((m) => ({ marca: m.slug as string }));
+}
+
 export default async function MarcaPage({ params }: { params: Promise<{ marca: string }> }) {
   const { marca } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data: marcaInfo } = await supabase.from("marcas").select("nombre").eq("slug", marca).maybeSingle();
   if (!marcaInfo) notFound();
   const label = marcaInfo.nombre;
