@@ -75,6 +75,22 @@ export async function eliminarProfesional(id: string) {
   const { data, error } = await supabase.from("profesionales").delete().eq("id", id).select("foto_url").single();
   if (error) throw new Error(error.message);
   await borrarImagenStorage(supabase, data?.foto_url);
+
+  // Los servicios guardan el id de quienes los hacen — se saca el de esta
+  // profesional para no dejar ids que ya no apuntan a nadie.
+  const { data: servicios } = await supabase
+    .from("servicios")
+    .select("id, profesionales_ids")
+    .contains("profesionales_ids", [id]);
+  for (const sv of servicios ?? []) {
+    await supabase
+      .from("servicios")
+      .update({ profesionales_ids: (sv.profesionales_ids as string[]).filter((pid) => pid !== id) })
+      .eq("id", sv.id);
+  }
+
   revalidatePath("/admin/profesionales");
+  revalidatePath("/admin/servicios");
+  revalidatePath("/reservas");
   revalidatePath("/profesionales");
 }

@@ -19,6 +19,8 @@ const CATEGORIA_INFO: Record<string, { number: string; label: string }> = {
 
 const fmt = (n: number) => "$" + n.toFixed(2);
 
+const ES_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function waHref(text: string) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 }
@@ -35,19 +37,37 @@ export default async function ReservasPage({
   searchParams,
 }: {
   // Llega desde el botón "Reservar con [nombre]" de la página de un
-  // profesional (/profesionales/[id]) — ver ese archivo. Si viene, se le
-  // agrega el nombre al mensaje de WhatsApp de cada servicio.
+  // profesional (/profesionales/[id]) con el ID de esa profesional. Si
+  // viene, solo se muestran los servicios donde ella está marcada (ver
+  // admin → Servicios) y se le agrega su nombre al mensaje de WhatsApp.
   searchParams: Promise<{ profesional?: string }>;
 }) {
-  const { profesional } = await searchParams;
+  const { profesional: profesionalParam } = await searchParams;
 
   const supabase = await createClient();
+
+  // Si el ID no es válido o esa profesional ya no existe / está oculta, se
+  // ignora y se muestran todos los servicios, como si hubiera entrado directo.
+  let profesionalActual: { id: string; primerNombre: string } | null = null;
+  if (profesionalParam && ES_UUID.test(profesionalParam)) {
+    const { data } = await supabase
+      .from("profesionales")
+      .select("id, nombre")
+      .eq("id", profesionalParam)
+      .eq("disponible", true)
+      .maybeSingle();
+    if (data) profesionalActual = { id: data.id, primerNombre: String(data.nombre).split(" ")[0] };
+  }
+
   const { data: servicios } = await supabase
     .from("servicios")
     .select("*")
     .order("created_at", { ascending: true });
 
-  const lista = (servicios ?? []) as Servicio[];
+  const todos = (servicios ?? []) as Servicio[];
+  const lista = profesionalActual
+    ? todos.filter((sv) => (sv.profesionales_ids ?? []).includes(profesionalActual.id))
+    : todos;
 
   const categorias = Object.entries(CATEGORIA_INFO)
     .map(([id, info]) => ({
@@ -68,7 +88,7 @@ export default async function ReservasPage({
           position:fixed (ver el componente), así que se puede montar en
           cualquier parte del árbol — queda flotando visible siempre,
           incluso si la persona ya se desplazó hacia abajo. */}
-      {!profesional && <AvisoElegirProfesional />}
+      {!profesionalActual && <AvisoElegirProfesional />}
       <div style={{ position: "relative", zIndex: 1 }}>
       <div
         style={{
@@ -108,10 +128,11 @@ export default async function ReservasPage({
           flexWrap: "wrap",
         }}
       >
-        <a href="#capilar" style={labelStyle}>BELLEZA Y SALUD CAPILAR</a>
-        <a href="#facial" style={labelStyle}>CUIDADO FACIAL</a>
-        <a href="#corporal" style={labelStyle}>TRATAMIENTOS CORPORALES</a>
-        <a href="#masajes" style={labelStyle}>MASAJES</a>
+        {categorias.map((cat) => (
+          <a key={cat.id} href={`#${cat.id}`} style={labelStyle}>
+            {cat.label.toUpperCase()}
+          </a>
+        ))}
       </div>
 
       <div style={{ textAlign: "center", padding: "90px 24px 20px" }}>
@@ -121,31 +142,52 @@ export default async function ReservasPage({
         <div className="font-serif" style={{ fontWeight: 300, fontSize: "clamp(2rem, 4.5vw, 3rem)", color: "#3d2f1a" }}>
           Nuestros tratamientos
         </div>
-        {profesional && (
-          <div
-            style={{
-              display: "inline-block",
-              marginTop: "20px",
-              fontFamily: "var(--font-montserrat), sans-serif",
-              fontWeight: 400,
-              fontSize: "12px",
-              letterSpacing: "0.08em",
-              color: "#6b5228",
-              border: "1px solid rgba(107,82,40,0.35)",
-              background: "rgba(201,168,118,0.12)",
-              padding: "10px 22px",
-              borderRadius: "20px",
-            }}
-          >
-            Eligiendo servicio para reservar con {profesional} — escoge abajo el que quieras
-          </div>
+        {profesionalActual && (
+          <>
+            <div
+              style={{
+                display: "inline-block",
+                marginTop: "20px",
+                fontFamily: "var(--font-montserrat), sans-serif",
+                fontWeight: 400,
+                fontSize: "12px",
+                letterSpacing: "0.08em",
+                color: "#6b5228",
+                border: "1px solid rgba(107,82,40,0.35)",
+                background: "rgba(201,168,118,0.12)",
+                padding: "10px 22px",
+                borderRadius: "20px",
+              }}
+            >
+              Servicios de {profesionalActual.primerNombre} — escoge abajo el que quieras reservar
+            </div>
+            <div style={{ marginTop: "14px" }}>
+              <Link
+                href="/reservas"
+                style={{ fontFamily: "var(--font-montserrat), sans-serif", fontWeight: 400, fontSize: "11px", letterSpacing: "0.16em", color: "#6b5228", textDecoration: "underline" }}
+              >
+                VER TODOS LOS SERVICIOS
+              </Link>
+            </div>
+          </>
         )}
       </div>
 
       <div style={{ maxWidth: "1180px", margin: "0 auto", padding: "40px 24px 0" }}>
         {categorias.length === 0 ? (
           <div style={{ textAlign: "center", padding: "80px 24px", fontFamily: "var(--font-montserrat), sans-serif", fontSize: "14px", color: "#5c5347" }}>
-            Estamos preparando nuestro catálogo de servicios. Vuelve pronto.
+            {profesionalActual ? (
+              <>
+                {profesionalActual.primerNombre} todavía no tiene servicios disponibles para reservar en línea.
+                <div style={{ marginTop: "18px" }}>
+                  <Link href="/reservas" style={{ color: "#6b5228", textDecoration: "underline", letterSpacing: "0.12em", fontSize: "12px" }}>
+                    VER TODOS LOS SERVICIOS
+                  </Link>
+                </div>
+              </>
+            ) : (
+              "Estamos preparando nuestro catálogo de servicios. Vuelve pronto."
+            )}
           </div>
         ) : (
           categorias.map((cat) => (
@@ -197,8 +239,8 @@ export default async function ReservasPage({
                       <div>
                         <a
                           href={waHref(
-                            profesional
-                              ? `Hola, quiero reservar con ${profesional}: ${sv.nombre}`
+                            profesionalActual
+                              ? `Hola, quiero reservar con ${profesionalActual.primerNombre}: ${sv.nombre}`
                               : "Hola, quiero reservar: " + sv.nombre
                           )}
                           target="_blank"

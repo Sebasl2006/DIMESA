@@ -15,10 +15,11 @@ const CATEGORIA_LABEL: Record<string, string> = {
 
 export default async function ServiciosAdminPage() {
   const supabase = await createClient();
-  const { data: servicios, error } = await supabase
-    .from("servicios")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [{ data: servicios, error }, { data: profesionales }] = await Promise.all([
+    supabase.from("servicios").select("*").order("created_at", { ascending: false }),
+    supabase.from("profesionales").select("id, nombre"),
+  ]);
+  const nombrePorId = new Map((profesionales ?? []).map((p) => [p.id as string, p.nombre as string]));
 
   return (
     <div style={s.container}>
@@ -42,7 +43,7 @@ export default async function ServiciosAdminPage() {
                 <th style={s.th}>Nombre</th>
                 <th style={s.th}>Desde</th>
                 <th style={s.th}>Categoría</th>
-                <th style={s.th}>Especialista</th>
+                <th style={s.th}>Profesionales</th>
                 <th style={s.th}></th>
               </tr>
             </thead>
@@ -59,7 +60,12 @@ export default async function ServiciosAdminPage() {
                   <td style={s.td}>{sv.nombre}</td>
                   <td style={s.td}>${sv.precio_desde.toFixed(2)}</td>
                   <td style={s.td}>{CATEGORIA_LABEL[sv.categoria] ?? sv.categoria}</td>
-                  <td style={s.td}>{sv.especialista || "—"}</td>
+                  <td style={s.td}>
+                    {(sv.profesionales_ids ?? [])
+                      .map((id) => nombrePorId.get(id))
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </td>
                   <td style={s.td}>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <Link href={`/admin/servicios/${sv.id}/editar`} className="admin-btn-secondary" style={s.smallButton}>Editar</Link>

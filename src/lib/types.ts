@@ -29,7 +29,9 @@ export interface Servicio {
   descripcion: string;
   categoria: Categoria;
   precio_desde: number;
-  especialista: string | null;
+  // Ids (tabla "profesionales") de quienes realizan este servicio — la
+  // página de Reservas filtra por esto cuando el cliente elige una profesional.
+  profesionales_ids: string[];
   imagen_url: string | null;
   created_at: string;
 }

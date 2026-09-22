@@ -152,7 +152,7 @@ export default async function ProfesionalDetallePage({ params }: { params: Promi
 
           <div style={{ marginTop: "44px" }}>
             <Link
-              href={`/reservas?profesional=${encodeURIComponent(p.nombre.split(" ")[0])}`}
+              href={`/reservas?profesional=${p.id}`}
               style={{
                 display: "inline-block",
                 fontFamily: "var(--font-montserrat), sans-serif",

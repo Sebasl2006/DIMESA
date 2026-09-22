@@ -3,15 +3,16 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type { Servicio } from "@/lib/types";
+import type { Profesional, Servicio } from "@/lib/types";
 import * as s from "../../admin-styles";
 
 interface ServicioFormProps {
   servicio?: Servicio;
+  profesionales: Pick<Profesional, "id" | "nombre" | "especialidad" | "disponible">[];
   action: (formData: FormData) => Promise<void>;
 }
 
-export function ServicioForm({ servicio, action }: ServicioFormProps) {
+export function ServicioForm({ servicio, profesionales, action }: ServicioFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -53,8 +54,33 @@ export function ServicioForm({ servicio, action }: ServicioFormProps) {
         <option value="masajes">Masajes</option>
       </select>
 
-      <label style={s.label}>Especialista (opcional)</label>
-      <input name="especialista" defaultValue={servicio?.especialista ?? ""} className="admin-input" style={s.input} />
+      <label style={s.label}>Profesionales que hacen este servicio</label>
+      {profesionales.length === 0 ? (
+        <div style={s.helpText}>Todavía no hay profesionales. Agrégalas primero en la sección Profesionales.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", margin: "6px 0 4px" }}>
+          {profesionales.map((p) => (
+            <label key={p.id} style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", color: "#e8e2d5", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                name="profesionales_ids"
+                value={p.id}
+                defaultChecked={servicio?.profesionales_ids?.includes(p.id) ?? false}
+                style={{ width: "16px", height: "16px", accentColor: "#c9a876" }}
+              />
+              {p.nombre}
+              <span style={{ color: "#8a8580", fontSize: "12px" }}>
+                {p.especialidad}
+                {p.disponible ? "" : " · oculta en la página"}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+      <div style={s.helpText}>
+        Cuando un cliente elige &quot;Reservar con [profesional]&quot;, solo ve los servicios donde ella está marcada. Si no
+        marcas a nadie, el servicio solo aparece cuando el cliente entra a Reservas directo, sin elegir profesional.
+      </div>
 
       <label style={s.label}>Foto</label>
       {servicio?.imagen_url && (

@@ -31,17 +31,30 @@ function leerCampos(formData: FormData) {
     descripcion: String(formData.get("descripcion") || "").trim(),
     precio_desde: precioValido(String(formData.get("precio_desde") || ""), "El precio"),
     categoria: enumValido(String(formData.get("categoria") || ""), CATEGORIAS_VALIDAS, "Categoría"),
-    especialista: String(formData.get("especialista") || "").trim() || null,
   };
+}
+
+// Solo se guardan ids de profesionales que existen de verdad — el
+// formulario del navegador se puede saltar con una petición hecha a mano.
+async function idsProfesionalesElegidos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formData: FormData
+): Promise<string[]> {
+  const elegidos = formData.getAll("profesionales_ids").map(String);
+  if (elegidos.length === 0) return [];
+  const { data, error } = await supabase.from("profesionales").select("id").in("id", elegidos);
+  if (error) throw new Error("No se pudieron verificar las profesionales elegidas.");
+  return (data ?? []).map((p) => p.id as string);
 }
 
 export async function crearServicio(formData: FormData) {
   const supabase = await createClient();
   await requireAdmin(supabase);
   const campos = leerCampos(formData);
+  const profesionales_ids = await idsProfesionalesElegidos(supabase, formData);
   const imagen_url = await subirImagen(supabase, formData.get("imagen") as File | null);
 
-  const { error } = await supabase.from("servicios").insert({ ...campos, imagen_url });
+  const { error } = await supabase.from("servicios").insert({ ...campos, profesionales_ids, imagen_url });
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/servicios");
@@ -52,12 +65,13 @@ export async function actualizarServicio(id: string, formData: FormData) {
   const supabase = await createClient();
   await requireAdmin(supabase);
   const campos = leerCampos(formData);
+  const profesionales_ids = await idsProfesionalesElegidos(supabase, formData);
   const imagenNueva = await subirImagen(supabase, formData.get("imagen") as File | null);
   const imagenActual = String(formData.get("imagen_url_actual") || "") || null;
 
   const { error } = await supabase
     .from("servicios")
-    .update({ ...campos, imagen_url: imagenNueva || imagenActual })
+    .update({ ...campos, profesionales_ids, imagen_url: imagenNueva || imagenActual })
     .eq("id", id);
   if (error) throw new Error(error.message);
 
