@@ -54,8 +54,13 @@ export function ImageSlot({
           alt={alt}
           fill
           quality={quality}
-          loading={eager ? "eager" : undefined}
-          fetchPriority={eager ? "high" : undefined}
+          // "priority" (en vez de solo loading/fetchPriority a mano) hace
+          // que Next.js agregue un <link rel="preload"> en el <head> —
+          // el navegador empieza a bajar la foto apenas lee el HTML, sin
+          // esperar a que termine de cargar el resto de la página. Antes,
+          // el cuadro de cada marca se veía negro con solo el nombre
+          // flotando encima hasta que la foto llegaba.
+          priority={eager}
           style={{
             objectFit: "cover",
             opacity: cargada ? 1 : 0,

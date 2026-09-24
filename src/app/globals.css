@@ -56,6 +56,13 @@ input::placeholder {
   flex-direction: column;
   height: calc(100vh - 76px);
   min-height: 560px;
+  /* El "acercamiento" (scale) de cada cuadro sobresale un poco de su
+     propio espacio — sin esto, ese sobrante empuja la altura real de la
+     página más allá de los 100vh de arriba, y el navegador reacciona
+     mostrando/ocultando la barra de scroll a cada rato según por dónde
+     pasa el mouse, lo que se siente como si toda la pantalla se moviera
+     de un lado a otro. */
+  overflow: hidden;
 }
 
 .brand-row {
