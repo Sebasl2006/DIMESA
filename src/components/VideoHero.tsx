@@ -39,10 +39,24 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     return () => clearTimeout(timer);
   }, []);
 
+  // true mientras el <video> siga montado — al fallar/saltar la intro (ver
+  // saltarIntro) se desmonta para que su cartel ("poster") no se quede
+  // tapando el contenido ya revelado debajo.
+  const [mostrarVideo, setMostrarVideo] = useState(true);
+
   const reveal = () => {
     if (revealed) return;
     setRevealed(true);
     contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // El video no arrancó o falló (autoplay bloqueado, conexión muy lenta,
+  // error de carga): se quita el <video> y se revela el resto de la página
+  // — mejor eso que dejar a la persona mirando una pantalla negra o
+  // congelada varios segundos.
+  const saltarIntro = () => {
+    setMostrarVideo(false);
+    reveal();
   };
 
   // Red de seguridad definitiva: un toque en la pantalla SIEMPRE cuenta
@@ -60,7 +74,7 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
       video.play()?.catch(() => {});
     }
     window.setTimeout(() => {
-      if (!videoRef.current || videoRef.current.paused) reveal();
+      if (!videoRef.current || videoRef.current.paused) saltarIntro();
     }, 400);
   };
 
@@ -68,14 +82,19 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     const video = videoRef.current;
     if (!video) return;
 
-    // Red de seguridad: si el video se traba de verdad (conexión lenta,
-    // modo de bajo consumo, o un navegador que ni siquiera avisa el error)
-    // esto igual revela el resto de la página pasado un tiempo bien por
-    // encima de lo que dura cualquiera de estos videos (~10s) — para no
-    // cortar el video a la mitad en el caso normal, que es la inmensa
-    // mayoría de las veces. Además, cualquier toque en la pantalla (ver
-    // handleTapHero) lo destraba al instante sin tener que esperar esto.
-    const maxWaitTimer = setTimeout(reveal, 20000);
+    // Redes de seguridad, de la más rápida a la más lenta:
+    // - Si a los 8s el video todavía no arrancó nada (conexión muy lenta o
+    //   un navegador que se queda esperando sin avisar), se salta la intro
+    //   — mejor eso que dejar la pantalla negra/congelada mucho tiempo.
+    // - Si por alguna razón sigue trabado a los 20s (bien por encima de lo
+    //   que dura cualquiera de estos videos, ~10s, para no cortarlo a la
+    //   mitad en el caso normal), también.
+    // Además, cualquier toque en la pantalla (ver handleTapHero) lo
+    // destraba al instante sin tener que esperar esto.
+    const arranqueTimer = setTimeout(() => {
+      if (video.currentTime === 0) saltarIntro();
+    }, 8000);
+    const maxWaitTimer = setTimeout(saltarIntro, 20000);
 
     // Arrancar en silencio es lo único que los navegadores de celular
     // garantizan sin necesitar interacción previa — intentar arrancar CON
@@ -92,9 +111,12 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     // hasta que quede realmente reproduciendo.
     const intentarReproducir = () => {
       if (!video.paused) return;
-      video.play()?.catch(() => {
-        // No arrancó todavía — se reintenta con el próximo evento, o
-        // como último recurso, revela la página el temporizador de arriba.
+      video.play()?.catch((err) => {
+        // NotAllowedError: el navegador no deja arrancar el video solo —
+        // reintentar no sirve de nada, se pasa directo a revelar la página.
+        // Cualquier otro rechazo se reintenta con el próximo evento, o lo
+        // cubren los temporizadores de arriba.
+        if (err && err.name === "NotAllowedError") saltarIntro();
       });
     };
     intentarReproducir();
@@ -103,6 +125,7 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     video.addEventListener("canplaythrough", intentarReproducir);
 
     return () => {
+      clearTimeout(arranqueTimer);
       clearTimeout(maxWaitTimer);
       video.removeEventListener("loadeddata", intentarReproducir);
       video.removeEventListener("canplay", intentarReproducir);
@@ -129,25 +152,27 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
           background: "#0b0a09",
         }}
       >
-        <video
-          ref={videoRef}
-          src={src}
-          poster={poster}
-          autoPlay
-          muted
-          playsInline
-          preload="auto"
-          onEnded={reveal}
-          onError={reveal}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            zIndex: 0,
-          }}
-        />
+        {mostrarVideo && (
+          <video
+            ref={videoRef}
+            src={src}
+            poster={poster}
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            onEnded={reveal}
+            onError={saltarIntro}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              zIndex: 0,
+            }}
+          />
+        )}
 
         <button
           type="button"
@@ -161,10 +186,10 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
             width: "42px",
             height: "42px",
             borderRadius: "50%",
+            display: mostrarVideo ? "flex" : "none",
             border: "1px solid rgba(201,168,118,0.4)",
             background: "rgba(11,10,9,0.55)",
             backdropFilter: "blur(4px)",
-            display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
