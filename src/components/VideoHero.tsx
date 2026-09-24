@@ -89,13 +89,30 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     // Intentar play() apenas se monta no siempre "prende" si el video
     // todavía no cargó nada — en vez de confiar en un solo intento, se
     // reintenta cada vez que el navegador avisa que ya tiene datos nuevos,
-    // hasta que quede realmente reproduciendo.
+    // hasta que quede realmente reproduciendo. "loadeddata", "canplay" y
+    // "canplaythrough" pueden dispararse casi al mismo tiempo (el archivo
+    // ya venía bastante bufferizado) — sin la bandera "intentando", cada
+    // uno llamaba a play() de nuevo mientras el anterior todavía no
+    // terminaba de resolver, y esos play() superpuestos son justo lo que
+    // hacía que el video se quedara pegado en el primer cuadro un rato
+    // antes de arrancar de verdad.
+    let intentando = false;
     const intentarReproducir = () => {
-      if (!video.paused) return;
-      video.play()?.catch(() => {
-        // No arrancó todavía — se reintenta con el próximo evento, o
-        // como último recurso, revela la página el temporizador de arriba.
-      });
+      if (!video.paused || intentando) return;
+      intentando = true;
+      const promesa = video.play();
+      if (promesa && typeof promesa.finally === "function") {
+        promesa
+          .catch(() => {
+            // No arrancó todavía — se reintenta con el próximo evento, o
+            // como último recurso, revela la página el temporizador de arriba.
+          })
+          .finally(() => {
+            intentando = false;
+          });
+      } else {
+        intentando = false;
+      }
     };
     intentarReproducir();
     video.addEventListener("loadeddata", intentarReproducir);
