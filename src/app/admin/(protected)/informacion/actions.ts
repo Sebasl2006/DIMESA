@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, imagenValida } from "@/lib/validation";
+import { comprimirImagen } from "@/lib/imagenes";
 import { borrarImagenStorage } from "@/lib/storage";
 
 async function subirImagen(
@@ -11,9 +12,10 @@ async function subirImagen(
 ): Promise<string | null> {
   if (!file || file.size === 0) return null;
   imagenValida(file);
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `informacion/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("dimesa").upload(path, file, {
+  const comprimida = await comprimirImagen(Buffer.from(await file.arrayBuffer()));
+  const path = `informacion/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage.from("dimesa").upload(path, comprimida, {
+    contentType: "image/jpeg",
     cacheControl: "3600",
     upsert: false,
   });
