@@ -45,6 +45,21 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
       },
+      {
+        // Los archivos en /public (videos de marca, posters, logo) no
+        // reciben caché por defecto en Next.js, así que cada visita —
+        // incluso a una marca ya vista — vuelve a bajar el video entero
+        // desde el servidor en vez de servirlo al instante desde caché.
+        // Estos archivos casi nunca cambian de nombre, así que es seguro
+        // guardarlos por un día y dejar que seed siga sirviendo la versión
+        // vieja mientras se refresca en segundo plano si sí cambian.
+        source: "/videos/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      },
+      {
+        source: "/images/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      },
     ];
   },
 };

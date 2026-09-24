@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/server";
 import { ImageSlot } from "@/components/ImageSlot";
+import { GuardedLink } from "@/components/GuardedLink";
 
 // Las marcas viven en la tabla "marcas" (nombre + foto de fondo del cuadro),
 // creadas desde el admin (Productos → Agregar producto → "+ Agregar marca
@@ -53,7 +53,7 @@ export default async function ProductosPage() {
             {fila.map((slug) => {
               const m = marcaMeta.get(slug)!;
               return (
-                <Link key={slug} href={`/productos/${slug}`} className="brand-card">
+                <GuardedLink key={slug} href={`/productos/${slug}`} className="brand-card">
                   <ImageSlot src={m.imagen_url} alt={m.nombre} placeholder="" eager style={{ position: "absolute", inset: 0 }} />
                   <div
                     className="brand-card-overlay"
@@ -77,7 +77,7 @@ export default async function ProductosPage() {
                       {m.nombre}
                     </div>
                   </div>
-                </Link>
+                </GuardedLink>
               );
             })}
           </div>

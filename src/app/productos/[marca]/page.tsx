@@ -53,11 +53,24 @@ const MARCA_OVERLAY: Partial<Record<string, { titulo: string; texto: string }>> 
   },
 };
 
-// Esta página NO usa caché (ISR): el catálogo de una marca grande (ej.
-// Revlon, +130 productos) tarda en consultarse, y si esa consulta bloqueara
-// el envío del HTML, el video de introducción se vería congelado esperando
-// justo eso. En vez de eso, el video se manda de inmediato (ver Suspense
-// más abajo) y los productos se transmiten aparte apenas están listos.
+// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
+// al instante cuando se guarda un cambio desde el admin (revalidatePath).
+// Sin esto, cada clic vuelve a pedirle la página entera al servidor —
+// y si alguien aplasta el mismo enlace varias veces seguidas (por
+// impaciencia, viendo que no "abre"), esas peticiones repetidas chocan
+// entre sí y a veces la página se queda sin navegar nunca. Con caché,
+// un clic ya encuentra la página lista y navega al instante, igual que
+// /profesionales. El Suspense de abajo sigue protegiendo el video para
+// el caso en que SÍ toque generarla de nuevo (marca nueva, o la primera
+// vez después de que pase el minuto de caché): esa consulta lenta no
+// bloquea el video ni en ese caso.
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const { data } = await createPublicClient().from("marcas").select("slug");
+  return (data ?? []).map((m) => ({ marca: m.slug as string }));
+}
+
 async function ListaDeProductos({ marca }: { marca: string }) {
   const supabase = createPublicClient();
   const { data: productos } = await supabase
