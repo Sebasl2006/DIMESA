@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createPublicClient } from "@/lib/supabase/server";
@@ -52,6 +53,24 @@ const MARCA_OVERLAY: Partial<Record<string, { titulo: string; texto: string }>> 
   },
 };
 
+// Consulta y arma la lista de productos aparte, en su propio componente
+// async con <Suspense> alrededor (ver más abajo). Así el video (que no
+// necesita esta consulta para nada) se manda al celular de inmediato, sin
+// esperar a que el servidor termine de traer y armar los productos de
+// marcas grandes como Revlon (132) — eso era lo que hacía que el video
+// tardara varios segundos en ni siquiera empezar a reproducirse.
+async function ListaDeProductos({ marca }: { marca: string }) {
+  const supabase = createPublicClient();
+  const { data: productos } = await supabase
+    .from("productos")
+    .select("*")
+    .eq("marca", marca)
+    .eq("disponible", true)
+    .order("created_at", { ascending: false });
+
+  return <ProductGrid productos={(productos ?? []) as Producto[]} />;
+}
+
 export default async function MarcaPage({ params }: { params: Promise<{ marca: string }> }) {
   const { marca } = await params;
   const supabase = createPublicClient();
@@ -88,13 +107,6 @@ export default async function MarcaPage({ params }: { params: Promise<{ marca: s
     </div>
   ) : undefined;
 
-  const { data: productos } = await supabase
-    .from("productos")
-    .select("*")
-    .eq("marca", marca)
-    .eq("disponible", true)
-    .order("created_at", { ascending: false });
-
   const content = (
     <div style={{ paddingTop: videoSrc ? 0 : "76px" }}>
       <div style={{ padding: "32px 24px 0" }}>
@@ -112,7 +124,9 @@ export default async function MarcaPage({ params }: { params: Promise<{ marca: s
         </div>
       </div>
 
-      <ProductGrid productos={(productos ?? []) as Producto[]} />
+      <Suspense fallback={null}>
+        <ListaDeProductos marca={marca} />
+      </Suspense>
 
       <div style={{ textAlign: "center", padding: "0 24px 90px" }}>
         <Link href="/#top" style={{ fontFamily: "var(--font-montserrat), sans-serif", fontWeight: 400, fontSize: "11px", letterSpacing: "0.2em", color: "#6b5228" }}>
