@@ -23,6 +23,10 @@ function agruparEnFilas(n: number): number[] {
   return Array.from({ length: filas }, (_, i) => base + (i >= filas - resto ? 1 : 0));
 }
 
+// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
+// al instante cuando se guarda un cambio desde el admin (revalidatePath).
+export const revalidate = 60;
+
 export default async function ProductosPage() {
   const supabase = createPublicClient();
   const [{ data: productosData }, { data: marcasData }] = await Promise.all([

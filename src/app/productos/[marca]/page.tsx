@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createPublicClient } from "@/lib/supabase/server";
@@ -53,22 +52,15 @@ const MARCA_OVERLAY: Partial<Record<string, { titulo: string; texto: string }>> 
   },
 };
 
-// Consulta y arma la lista de productos aparte, en su propio componente
-// async con <Suspense> alrededor (ver más abajo). Así el video (que no
-// necesita esta consulta para nada) se manda al celular de inmediato, sin
-// esperar a que el servidor termine de traer y armar los productos de
-// marcas grandes como Revlon (132) — eso era lo que hacía que el video
-// tardara varios segundos en ni siquiera empezar a reproducirse.
-async function ListaDeProductos({ marca }: { marca: string }) {
-  const supabase = createPublicClient();
-  const { data: productos } = await supabase
-    .from("productos")
-    .select("*")
-    .eq("marca", marca)
-    .eq("disponible", true)
-    .order("created_at", { ascending: false });
+// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
+// al instante cuando se guarda un cambio desde el admin (revalidatePath).
+export const revalidate = 60;
 
-  return <ProductGrid productos={(productos ?? []) as Producto[]} />;
+// Las marcas que ya existen se generan de antemano; una marca nueva creada
+// desde el admin se genera en su primera visita y desde ahí queda guardada.
+export async function generateStaticParams() {
+  const { data } = await createPublicClient().from("marcas").select("slug");
+  return (data ?? []).map((m) => ({ marca: m.slug as string }));
 }
 
 export default async function MarcaPage({ params }: { params: Promise<{ marca: string }> }) {
@@ -107,6 +99,13 @@ export default async function MarcaPage({ params }: { params: Promise<{ marca: s
     </div>
   ) : undefined;
 
+  const { data: productos } = await supabase
+    .from("productos")
+    .select("*")
+    .eq("marca", marca)
+    .eq("disponible", true)
+    .order("created_at", { ascending: false });
+
   const content = (
     <div style={{ paddingTop: videoSrc ? 0 : "76px" }}>
       <div style={{ padding: "32px 24px 0" }}>
@@ -124,9 +123,7 @@ export default async function MarcaPage({ params }: { params: Promise<{ marca: s
         </div>
       </div>
 
-      <Suspense fallback={null}>
-        <ListaDeProductos marca={marca} />
-      </Suspense>
+      <ProductGrid productos={(productos ?? []) as Producto[]} />
 
       <div style={{ textAlign: "center", padding: "0 24px 90px" }}>
         <Link href="/#top" style={{ fontFamily: "var(--font-montserrat), sans-serif", fontWeight: 400, fontSize: "11px", letterSpacing: "0.2em", color: "#6b5228" }}>
