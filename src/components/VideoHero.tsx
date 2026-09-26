@@ -93,14 +93,15 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     // si a los 9s sigue igual, se muestra la página sobre la imagen de
     // portada en vez de dejar a la persona esperando.
     const reintentoTimer = setTimeout(() => {
-      if (video.currentTime === 0) {
+      // Solo si el navegador no ha recibido NADA (readyState 0); si ya está
+      // descargando, reiniciar la carga solo haría perder lo avanzado.
+      if (video.readyState === 0) {
         video.load();
-        video.play()?.catch(() => {});
       }
-    }, 4000);
+    }, 5000);
     const sinArranqueTimer = setTimeout(() => {
       if (video.currentTime === 0) reveal();
-    }, 9000);
+    }, 14000);
 
     // Arrancar en silencio es lo único que los navegadores de celular
     // garantizan sin necesitar interacción previa — intentar arrancar CON
@@ -144,10 +145,16 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
         intentando = false;
       }
     };
-    intentarReproducir();
-    video.addEventListener("loadeddata", intentarReproducir);
-    video.addEventListener("canplay", intentarReproducir);
+    // La primera vez que alguien entra, el video se está descargando a la vez
+    // que se reproduce: si arranca apenas hay unos cuadros ("canplay"), el
+    // reproductor alcanza a la descarga y se traba una y otra vez. Por eso
+    // NO se arranca hasta que el navegador avisa que ya tiene suficiente para
+    // verlo completo sin cortes ("canplaythrough") — mientras tanto se ve el
+    // primer cuadro (la portada). Si eso tarda más de 6s (conexión muy lenta
+    // o un navegador que nunca avisa), se arranca igual.
+    if (video.readyState >= 4) intentarReproducir();
     video.addEventListener("canplaythrough", intentarReproducir);
+    const arranqueForzado = setTimeout(intentarReproducir, 6000);
     const alReproducir = () => setReproduciendo(true);
     video.addEventListener("playing", alReproducir);
     if (!video.paused && video.currentTime > 0) setReproduciendo(true);
@@ -156,9 +163,8 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
       clearTimeout(maxWaitTimer);
       clearTimeout(reintentoTimer);
       clearTimeout(sinArranqueTimer);
+      clearTimeout(arranqueForzado);
       video.removeEventListener("playing", alReproducir);
-      video.removeEventListener("loadeddata", intentarReproducir);
-      video.removeEventListener("canplay", intentarReproducir);
       video.removeEventListener("canplaythrough", intentarReproducir);
     };
   }, []);

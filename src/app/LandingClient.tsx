@@ -151,16 +151,14 @@ export function LandingClient() {
     // Además, cualquier toque en la pantalla (ver handleTapHero) lo
     // destraba al instante sin tener que esperar esto.
     const arranqueTimer = setTimeout(() => {
-      if (video.currentTime === 0) {
-        // Primero se reinicia la carga una vez (el atasco típico de un
-        // primer intento que nunca arranca); si tampoco así, se salta.
-        video.load();
-        video.play()?.catch(() => {});
-      }
-    }, 4500);
+      // Si el navegador no ha recibido NADA todavía, se reinicia la carga una
+      // vez (el atasco típico de un primer intento que nunca arranca). Si ya
+      // está descargando no se toca: reiniciar solo perdería lo avanzado.
+      if (video.readyState === 0) video.load();
+    }, 5000);
     const salto2Timer = setTimeout(() => {
       if (video.currentTime === 0 && !bloqueadoRef.current) saltarIntro();
-    }, 10000);
+    }, 14000);
     const maxWaitTimer = setTimeout(saltarIntro, 20000);
 
     // Arrancar en silencio es lo único que los navegadores garantizan sin
@@ -197,18 +195,23 @@ export function LandingClient() {
       bloqueadoRef.current = false;
     };
     video.addEventListener("playing", alReproducir);
-    intentarReproducir();
-    video.addEventListener("loadeddata", intentarReproducir);
-    video.addEventListener("canplay", intentarReproducir);
+    // La primera vez que alguien entra, el video se descarga a la vez que se
+    // reproduce: si arranca apenas hay unos cuadros ("canplay"), el
+    // reproductor alcanza a la descarga y se traba una y otra vez. Por eso
+    // NO se arranca hasta que el navegador avisa que ya tiene suficiente para
+    // verlo entero sin cortes ("canplaythrough") — mientras tanto se ve el
+    // primer cuadro. Si tarda más de 6s (conexión muy lenta o un navegador que
+    // nunca avisa), se arranca igual.
+    if (video.readyState >= 4) intentarReproducir();
     video.addEventListener("canplaythrough", intentarReproducir);
+    const arranqueForzado = setTimeout(intentarReproducir, 6000);
 
     return () => {
       clearTimeout(arranqueTimer);
       clearTimeout(salto2Timer);
+      clearTimeout(arranqueForzado);
       clearTimeout(maxWaitTimer);
       video.removeEventListener("playing", alReproducir);
-      video.removeEventListener("loadeddata", intentarReproducir);
-      video.removeEventListener("canplay", intentarReproducir);
       video.removeEventListener("canplaythrough", intentarReproducir);
     };
   }, [mostrarVideo]);
@@ -286,8 +289,7 @@ export function LandingClient() {
         {mostrarVideo && (
           <video
             ref={videoRef}
-            src="/videos/dimesa-hero.mp4"
-            autoPlay
+            src="/videos/dimesa-hero-v2.mp4"
             muted
             playsInline
             preload="auto"

@@ -10,11 +10,11 @@ import { VideoHero } from "@/components/VideoHero";
 // otra marca listo, solo agrega su entrada aquí con el mismo slug que
 // tiene en la tabla "marcas" — no hace falta tocar nada más de esta página.
 const MARCA_VIDEO: Partial<Record<string, string>> = {
-  botanique: "/videos/botanique-hero.mp4",
-  revlon: "/videos/revlon-hero.mp4",
-  olaplex: "/videos/olaplex-hero.mp4",
-  truss: "/videos/truss-hero.mp4",
-  mq_professional: "/videos/mq-hero.mp4",
+  botanique: "/videos/botanique-hero-v2.mp4",
+  revlon: "/videos/revlon-hero-v2.mp4",
+  olaplex: "/videos/olaplex-hero-v2.mp4",
+  truss: "/videos/truss-hero-v2.mp4",
+  mq_professional: "/videos/mq-hero-v2.mp4",
 };
 
 // Imagen de portada de cada video — se ve de inmediato mientras el video
