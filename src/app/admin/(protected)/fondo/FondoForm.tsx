@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { actualizarFondo, restaurarFondoOriginal } from "./actions";
+import { prepararImagenesDelFormulario } from "@/lib/comprimir-imagen-cliente";
 import * as s from "../../admin-styles";
 
 interface FondoFormProps {
@@ -23,12 +24,19 @@ export function FondoForm({ fondoActual }: FondoFormProps) {
     setSaved(false);
     setSubmitting(true);
     try {
-      await actualizarFondo(new FormData(e.currentTarget));
+      const formulario = e.currentTarget;
+      const formData = new FormData(formulario);
+      await prepararImagenesDelFormulario(formData);
+      const resultado = await actualizarFondo(formData);
+      if (!resultado.ok) {
+        setError(resultado.error);
+        return;
+      }
       setSaved(true);
       setPreview(null);
-      (e.target as HTMLFormElement).reset();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ocurrió un error al guardar.");
+      formulario.reset();
+    } catch {
+      setError("No se pudo guardar: falló la conexión con el servidor. Revisa tu internet e intenta de nuevo.");
     } finally {
       setSubmitting(false);
     }
@@ -40,10 +48,14 @@ export function FondoForm({ fondoActual }: FondoFormProps) {
     setSaved(false);
     setRestaurando(true);
     try {
-      await restaurarFondoOriginal();
+      const resultado = await restaurarFondoOriginal();
+      if (!resultado.ok) {
+        setError(resultado.error);
+        return;
+      }
       setSaved(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ocurrió un error al restaurar.");
+    } catch {
+      setError("No se pudo restaurar: falló la conexión con el servidor. Revisa tu internet e intenta de nuevo.");
     } finally {
       setRestaurando(false);
     }

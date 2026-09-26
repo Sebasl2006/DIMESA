@@ -1,33 +1,46 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Profesional, Servicio } from "@/lib/types";
+import type { ResultadoAccion } from "@/lib/resultado";
+import { prepararImagenesDelFormulario } from "@/lib/comprimir-imagen-cliente";
 import * as s from "../../admin-styles";
 
 interface ServicioFormProps {
   servicio?: Servicio;
   profesionales: Pick<Profesional, "id" | "nombre" | "especialidad" | "disponible">[];
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<ResultadoAccion>;
 }
 
 export function ServicioForm({ servicio, profesionales, action }: ServicioFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Identificador de esta creación — evita que un reenvío duplique el servicio.
+  const [idNuevo, setIdNuevo] = useState("");
+  useEffect(() => {
+    if (!servicio) setIdNuevo(crypto.randomUUID());
+  }, [servicio]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
-      await action(new FormData(e.currentTarget));
+      const formData = new FormData(e.currentTarget);
+      await prepararImagenesDelFormulario(formData);
+      const resultado = await action(formData);
+      if (!resultado.ok) {
+        setSubmitting(false);
+        setError(resultado.error);
+        return;
+      }
       router.push("/admin/servicios");
-      router.refresh();
-    } catch (err) {
+    } catch {
       setSubmitting(false);
-      setError(err instanceof Error ? err.message : "Ocurrió un error al guardar.");
+      setError("No se pudo guardar: falló la conexión con el servidor. Revisa tu internet e intenta de nuevo.");
     }
   };
 
@@ -36,6 +49,7 @@ export function ServicioForm({ servicio, profesionales, action }: ServicioFormPr
       {error && <div style={s.errorBox}>{error}</div>}
 
       <input type="hidden" name="imagen_url_actual" defaultValue={servicio?.imagen_url ?? ""} />
+      {!servicio && idNuevo && <input type="hidden" name="id" value={idNuevo} readOnly />}
 
       <label style={s.label}>Nombre</label>
       <input name="nombre" required defaultValue={servicio?.nombre} className="admin-input" style={s.input} />

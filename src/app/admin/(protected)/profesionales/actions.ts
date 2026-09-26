@@ -5,6 +5,8 @@ import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, imagenValida } from "@/lib/validation";
 import { unirBio } from "@/lib/bio";
 import { borrarImagenStorage } from "@/lib/storage";
+import { conManejoDeErrores, exigirFilasAfectadas, idDeCreacion, refrescarSitioPublico } from "@/lib/admin-helpers";
+import type { ResultadoAccion } from "@/lib/resultado";
 
 async function subirImagen(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -34,64 +36,91 @@ function leerCampos(formData: FormData) {
   };
 }
 
-export async function crearProfesional(formData: FormData) {
-  const supabase = await createClient();
-  await requireAdmin(supabase);
-  const campos = leerCampos(formData);
-  const foto_url = await subirImagen(supabase, formData.get("foto") as File | null);
+export async function crearProfesional(formData: FormData): Promise<ResultadoAccion> {
+  return conManejoDeErrores(async () => {
+    const supabase = await createClient();
+    await requireAdmin(supabase);
 
-  const { error } = await supabase.from("profesionales").insert({ ...campos, foto_url });
-  if (error) throw new Error(error.message);
+    const id = idDeCreacion(formData);
+    if (id) {
+      const { data: yaExiste } = await supabase.from("profesionales").select("id").eq("id", id).maybeSingle();
+      if (yaExiste) return;
+    }
 
-  revalidatePath("/admin/profesionales");
-  revalidatePath("/profesionales", "layout");
-  revalidatePath("/reservas", "layout");
+    const campos = leerCampos(formData);
+    const foto_url = await subirImagen(supabase, formData.get("foto") as File | null);
+
+    const { data, error } = await supabase
+      .from("profesionales")
+      .insert({ ...(id ? { id } : {}), ...campos, foto_url })
+      .select("id");
+    if (error) {
+      await borrarImagenStorage(supabase, foto_url);
+      if (id && error.code === "23505") return;
+      throw new Error(error.message);
+    }
+    exigirFilasAfectadas(data, "No se pudo crear la profesional: la base de datos no aceptó el cambio (revisa que hayas iniciado sesión con un correo autorizado).");
+
+    revalidatePath("/admin/profesionales");
+    refrescarSitioPublico();
+  });
 }
 
-export async function actualizarProfesional(id: string, formData: FormData) {
-  const supabase = await createClient();
-  await requireAdmin(supabase);
-  const campos = leerCampos(formData);
-  const fotoNueva = await subirImagen(supabase, formData.get("foto") as File | null);
-  const fotoActual = String(formData.get("foto_url_actual") || "") || null;
+export async function actualizarProfesional(id: string, formData: FormData): Promise<ResultadoAccion> {
+  return conManejoDeErrores(async () => {
+    const supabase = await createClient();
+    await requireAdmin(supabase);
+    const campos = leerCampos(formData);
+    const fotoNueva = await subirImagen(supabase, formData.get("foto") as File | null);
+    const fotoActual = String(formData.get("foto_url_actual") || "") || null;
 
-  const { error } = await supabase
-    .from("profesionales")
-    .update({ ...campos, foto_url: fotoNueva || fotoActual })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+    const { data, error } = await supabase
+      .from("profesionales")
+      .update({ ...campos, foto_url: fotoNueva || fotoActual })
+      .eq("id", id)
+      .select("id");
+    if (error) {
+      await borrarImagenStorage(supabase, fotoNueva);
+      throw new Error(error.message);
+    }
+    if (!data || data.length === 0) {
+      await borrarImagenStorage(supabase, fotoNueva);
+      throw new Error("No se guardó ningún cambio: la profesional ya no existe o tu correo no tiene permiso para editarla.");
+    }
 
-  if (fotoNueva && fotoActual) {
-    await borrarImagenStorage(supabase, fotoActual);
-  }
+    if (fotoNueva && fotoActual) {
+      await borrarImagenStorage(supabase, fotoActual);
+    }
 
-  revalidatePath("/admin/profesionales");
-  revalidatePath("/profesionales", "layout");
-  revalidatePath("/reservas", "layout");
+    revalidatePath("/admin/profesionales");
+    refrescarSitioPublico();
+  });
 }
 
-export async function eliminarProfesional(id: string) {
-  const supabase = await createClient();
-  await requireAdmin(supabase);
-  const { data, error } = await supabase.from("profesionales").delete().eq("id", id).select("foto_url").single();
-  if (error) throw new Error(error.message);
-  await borrarImagenStorage(supabase, data?.foto_url);
+export async function eliminarProfesional(id: string): Promise<ResultadoAccion> {
+  return conManejoDeErrores(async () => {
+    const supabase = await createClient();
+    await requireAdmin(supabase);
+    const { data, error } = await supabase.from("profesionales").delete().eq("id", id).select("foto_url");
+    if (error) throw new Error(error.message);
+    exigirFilasAfectadas(data, "No se eliminó nada: la profesional ya no existe o tu correo no tiene permiso para eliminarla.");
+    await borrarImagenStorage(supabase, data?.[0]?.foto_url);
 
-  // Los servicios guardan el id de quienes los hacen — se saca el de esta
-  // profesional para no dejar ids que ya no apuntan a nadie.
-  const { data: servicios } = await supabase
-    .from("servicios")
-    .select("id, profesionales_ids")
-    .contains("profesionales_ids", [id]);
-  for (const sv of servicios ?? []) {
-    await supabase
+    // Los servicios guardan el id de quienes los hacen — se saca el de esta
+    // profesional para no dejar ids que ya no apuntan a nadie.
+    const { data: servicios } = await supabase
       .from("servicios")
-      .update({ profesionales_ids: (sv.profesionales_ids as string[]).filter((pid) => pid !== id) })
-      .eq("id", sv.id);
-  }
+      .select("id, profesionales_ids")
+      .contains("profesionales_ids", [id]);
+    for (const sv of servicios ?? []) {
+      await supabase
+        .from("servicios")
+        .update({ profesionales_ids: (sv.profesionales_ids as string[]).filter((pid) => pid !== id) })
+        .eq("id", sv.id);
+    }
 
-  revalidatePath("/admin/profesionales");
-  revalidatePath("/admin/servicios");
-  revalidatePath("/profesionales", "layout");
-  revalidatePath("/reservas", "layout");
+    revalidatePath("/admin/profesionales");
+    revalidatePath("/admin/servicios");
+    refrescarSitioPublico();
+  });
 }

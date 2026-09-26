@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, precioValido, enumValido, imagenValida } from "@/lib/validation";
 import { borrarImagenStorage } from "@/lib/storage";
+import { conManejoDeErrores, exigirFilasAfectadas, idDeCreacion, refrescarSitioPublico } from "@/lib/admin-helpers";
+import type { ResultadoAccion } from "@/lib/resultado";
 import type { Categoria } from "@/lib/types";
 
 const CATEGORIAS_VALIDAS: readonly Categoria[] = ["capilar", "facial", "corporal", "masajes"];
@@ -47,48 +49,78 @@ async function idsProfesionalesElegidos(
   return (data ?? []).map((p) => p.id as string);
 }
 
-export async function crearServicio(formData: FormData) {
-  const supabase = await createClient();
-  await requireAdmin(supabase);
-  const campos = leerCampos(formData);
-  const profesionales_ids = await idsProfesionalesElegidos(supabase, formData);
-  const imagen_url = await subirImagen(supabase, formData.get("imagen") as File | null);
+export async function crearServicio(formData: FormData): Promise<ResultadoAccion> {
+  return conManejoDeErrores(async () => {
+    const supabase = await createClient();
+    await requireAdmin(supabase);
 
-  const { error } = await supabase.from("servicios").insert({ ...campos, profesionales_ids, imagen_url });
-  if (error) throw new Error(error.message);
+    const id = idDeCreacion(formData);
+    if (id) {
+      const { data: yaExiste } = await supabase.from("servicios").select("id").eq("id", id).maybeSingle();
+      if (yaExiste) return;
+    }
 
-  revalidatePath("/admin/servicios");
-  revalidatePath("/reservas", "layout");
+    const campos = leerCampos(formData);
+    const profesionales_ids = await idsProfesionalesElegidos(supabase, formData);
+    const imagen_url = await subirImagen(supabase, formData.get("imagen") as File | null);
+
+    const { data, error } = await supabase
+      .from("servicios")
+      .insert({ ...(id ? { id } : {}), ...campos, profesionales_ids, imagen_url })
+      .select("id");
+    if (error) {
+      await borrarImagenStorage(supabase, imagen_url);
+      if (id && error.code === "23505") return;
+      throw new Error(error.message);
+    }
+    exigirFilasAfectadas(data, "No se pudo crear el servicio: la base de datos no aceptó el cambio (revisa que hayas iniciado sesión con un correo autorizado).");
+
+    revalidatePath("/admin/servicios");
+    refrescarSitioPublico();
+  });
 }
 
-export async function actualizarServicio(id: string, formData: FormData) {
-  const supabase = await createClient();
-  await requireAdmin(supabase);
-  const campos = leerCampos(formData);
-  const profesionales_ids = await idsProfesionalesElegidos(supabase, formData);
-  const imagenNueva = await subirImagen(supabase, formData.get("imagen") as File | null);
-  const imagenActual = String(formData.get("imagen_url_actual") || "") || null;
+export async function actualizarServicio(id: string, formData: FormData): Promise<ResultadoAccion> {
+  return conManejoDeErrores(async () => {
+    const supabase = await createClient();
+    await requireAdmin(supabase);
+    const campos = leerCampos(formData);
+    const profesionales_ids = await idsProfesionalesElegidos(supabase, formData);
+    const imagenNueva = await subirImagen(supabase, formData.get("imagen") as File | null);
+    const imagenActual = String(formData.get("imagen_url_actual") || "") || null;
 
-  const { error } = await supabase
-    .from("servicios")
-    .update({ ...campos, profesionales_ids, imagen_url: imagenNueva || imagenActual })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+    const { data, error } = await supabase
+      .from("servicios")
+      .update({ ...campos, profesionales_ids, imagen_url: imagenNueva || imagenActual })
+      .eq("id", id)
+      .select("id");
+    if (error) {
+      await borrarImagenStorage(supabase, imagenNueva);
+      throw new Error(error.message);
+    }
+    if (!data || data.length === 0) {
+      await borrarImagenStorage(supabase, imagenNueva);
+      throw new Error("No se guardó ningún cambio: el servicio ya no existe o tu correo no tiene permiso para editarlo.");
+    }
 
-  if (imagenNueva && imagenActual) {
-    await borrarImagenStorage(supabase, imagenActual);
-  }
+    if (imagenNueva && imagenActual) {
+      await borrarImagenStorage(supabase, imagenActual);
+    }
 
-  revalidatePath("/admin/servicios");
-  revalidatePath("/reservas", "layout");
+    revalidatePath("/admin/servicios");
+    refrescarSitioPublico();
+  });
 }
 
-export async function eliminarServicio(id: string) {
-  const supabase = await createClient();
-  await requireAdmin(supabase);
-  const { data, error } = await supabase.from("servicios").delete().eq("id", id).select("imagen_url").single();
-  if (error) throw new Error(error.message);
-  await borrarImagenStorage(supabase, data?.imagen_url);
-  revalidatePath("/admin/servicios");
-  revalidatePath("/reservas", "layout");
+export async function eliminarServicio(id: string): Promise<ResultadoAccion> {
+  return conManejoDeErrores(async () => {
+    const supabase = await createClient();
+    await requireAdmin(supabase);
+    const { data, error } = await supabase.from("servicios").delete().eq("id", id).select("imagen_url");
+    if (error) throw new Error(error.message);
+    exigirFilasAfectadas(data, "No se eliminó nada: el servicio ya no existe o tu correo no tiene permiso para eliminarlo.");
+    await borrarImagenStorage(supabase, data?.[0]?.imagen_url);
+    revalidatePath("/admin/servicios");
+    refrescarSitioPublico();
+  });
 }

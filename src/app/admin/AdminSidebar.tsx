@@ -31,6 +31,7 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className="admin-sidebar-link"
               style={{ ...s.sidebarLink, ...(active ? s.sidebarLinkActive : {}) }}
               title={item.label}

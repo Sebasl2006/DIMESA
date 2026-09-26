@@ -17,7 +17,7 @@ export default async function ProfesionalesAdminPage() {
     <div style={s.container}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
         <h1 style={{ ...s.h1, margin: 0 }}>Profesionales</h1>
-        <Link href="/admin/profesionales/nuevo" className="admin-btn-primary" style={s.primaryButton}>+ Agregar profesional</Link>
+        <Link href="/admin/profesionales/nuevo" prefetch={false} className="admin-btn-primary" style={s.primaryButton}>+ Agregar profesional</Link>
       </div>
 
       <div style={s.card}>
@@ -57,7 +57,7 @@ export default async function ProfesionalesAdminPage() {
                   </td>
                   <td style={s.td}>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <Link href={`/admin/profesionales/${p.id}/editar`} className="admin-btn-secondary" style={s.smallButton}>Editar</Link>
+                      <Link href={`/admin/profesionales/${p.id}/editar`} prefetch={false} className="admin-btn-secondary" style={s.smallButton}>Editar</Link>
                       <DeleteButton
                         action={eliminarProfesional.bind(null, p.id)}
                         confirmText={`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`}

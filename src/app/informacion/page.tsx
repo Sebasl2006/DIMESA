@@ -49,9 +49,14 @@ const bodyText = {
   color: "#8a8580",
 } as const;
 
-// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
-// al instante cuando se guarda un cambio desde el admin (revalidatePath).
-export const revalidate = 60;
+// Esta página se genera en CADA visita (no se guarda una copia). Lo que
+// muestra depende de lo que se cambia en el panel de administración (un
+// producto que se oculta, un precio...), y el servidor de Hostinger corre
+// varias copias del sitio a la vez, cada una con su propia memoria: una copia
+// guardada se ponía al día en una y seguía vieja en las otras, así que quien
+// recargaba la tienda veía el producto oculto aparecer y desaparecer durante
+// casi un minuto. Sin copia guardada, todos ven siempre lo último.
+export const dynamic = "force-dynamic";
 
 export default async function InformacionPage() {
   const supabase = createPublicClient();

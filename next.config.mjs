@@ -6,9 +6,13 @@ const nextConfig = {
     // Next.js (1MB) es más chico que el que ya validamos nosotros mismos
     // en imagenValida() (5MB, ver src/lib/validation.ts), así que una foto
     // de celular normal rebotaba con el error genérico de Next antes de
-    // llegar a nuestra propia validación. Los igualamos en 5MB.
+    // llegar a nuestra propia validación. Se deja más alto (8MB) que el 5MB
+    // de esa validación para que Next nunca corte la petición ANTES de que
+    // nuestro código pueda responder con un mensaje claro; además, los
+    // formularios del panel ya reducen las fotos en el navegador antes de
+    // subirlas (ver src/lib/comprimir-imagen-cliente.ts).
     serverActions: {
-      bodySizeLimit: "5mb",
+      bodySizeLimit: "8mb",
     },
   },
   images: {

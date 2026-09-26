@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, imagenValida } from "@/lib/validation";
 import { borrarImagenStorage } from "@/lib/storage";
+import { conManejoDeErrores, exigirFilasAfectadas, refrescarSitioPublico } from "@/lib/admin-helpers";
+import type { ResultadoAccion } from "@/lib/resultado";
 
 async function subirImagen(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -38,32 +40,40 @@ function parsearCuentas(raw: string): { banco: string; tipo_cuenta: string; nume
   }));
 }
 
-export async function actualizarInformacion(formData: FormData) {
-  const supabase = await createClient();
-  await requireAdmin(supabase);
+export async function actualizarInformacion(formData: FormData): Promise<ResultadoAccion> {
+  return conManejoDeErrores(async () => {
+    const supabase = await createClient();
+    await requireAdmin(supabase);
 
-  const fotoNueva = await subirImagen(supabase, formData.get("foto") as File | null);
-  const fotoActual = String(formData.get("foto_url_actual") || "") || null;
+    const fotoNueva = await subirImagen(supabase, formData.get("foto") as File | null);
+    const fotoActual = String(formData.get("foto_url_actual") || "") || null;
 
-  const campos = {
-    titulo: requerido(String(formData.get("titulo") || ""), "Título"),
-    descripcion: String(formData.get("descripcion") || "").trim(),
-    direccion: String(formData.get("direccion") || "").trim(),
-    horario: String(formData.get("horario") || "").trim(),
-    telefono: String(formData.get("telefono") || "").trim(),
-    foto_url: fotoNueva || fotoActual,
-    cuentas_bancarias: parsearCuentas(String(formData.get("cuentas_bancarias") || "[]")),
-    updated_at: new Date().toISOString(),
-  };
+    const campos = {
+      titulo: requerido(String(formData.get("titulo") || ""), "Título"),
+      descripcion: String(formData.get("descripcion") || "").trim(),
+      direccion: String(formData.get("direccion") || "").trim(),
+      horario: String(formData.get("horario") || "").trim(),
+      telefono: String(formData.get("telefono") || "").trim(),
+      foto_url: fotoNueva || fotoActual,
+      cuentas_bancarias: parsearCuentas(String(formData.get("cuentas_bancarias") || "[]")),
+      updated_at: new Date().toISOString(),
+    };
 
-  const { error } = await supabase.from("informacion").update(campos).eq("id", 1);
-  if (error) throw new Error(error.message);
+    const { data, error } = await supabase.from("informacion").update(campos).eq("id", 1).select("id");
+    if (error) {
+      await borrarImagenStorage(supabase, fotoNueva);
+      throw new Error(error.message);
+    }
+    if (!data || data.length === 0) {
+      await borrarImagenStorage(supabase, fotoNueva);
+      throw new Error("No se guardó ningún cambio: tu correo no tiene permiso para editar la información del sitio.");
+    }
 
-  if (fotoNueva && fotoActual) {
-    await borrarImagenStorage(supabase, fotoActual);
-  }
+    if (fotoNueva && fotoActual) {
+      await borrarImagenStorage(supabase, fotoActual);
+    }
 
-  revalidatePath("/admin/informacion");
-  revalidatePath("/");
-  revalidatePath("/informacion");
+    revalidatePath("/admin/informacion");
+    refrescarSitioPublico();
+  });
 }

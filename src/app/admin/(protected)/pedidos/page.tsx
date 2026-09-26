@@ -75,7 +75,7 @@ export default async function PedidosAdminPage() {
                   </td>
                   <td style={s.td}>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <Link href={`/admin/pedidos/${p.id}`} className="admin-btn-secondary" style={s.smallButton}>
+                      <Link href={`/admin/pedidos/${p.id}`} prefetch={false} className="admin-btn-secondary" style={s.smallButton}>
                         Ver detalle
                       </Link>
                       <DeleteButton

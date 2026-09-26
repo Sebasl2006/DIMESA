@@ -5,16 +5,14 @@ import { ReservasView } from "../ReservasView";
 
 const ES_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Se genera una vez y se guarda; se vuelve a generar sola a lo más cada 60 s, y
-// al instante cuando se guarda un cambio desde el admin (revalidatePath).
-export const revalidate = 60;
-
-// Una página por cada profesional visible; una nueva que se agregue desde el
-// admin se genera en su primera visita y desde ahí queda guardada.
-export async function generateStaticParams() {
-  const { data } = await createPublicClient().from("profesionales").select("id").eq("disponible", true);
-  return (data ?? []).map((p) => ({ profesionalId: p.id as string }));
-}
+// Esta página se genera en CADA visita (no se guarda una copia). Lo que
+// muestra depende de lo que se cambia en el panel de administración (un
+// producto que se oculta, un precio...), y el servidor de Hostinger corre
+// varias copias del sitio a la vez, cada una con su propia memoria: una copia
+// guardada se ponía al día en una y seguía vieja en las otras, así que quien
+// recargaba la tienda veía el producto oculto aparecer y desaparecer durante
+// casi un minuto. Sin copia guardada, todos ven siempre lo último.
+export const dynamic = "force-dynamic";
 
 // Llega desde el botón "Reservar con [nombre]" de la página de una
 // profesional (/profesionales/[id]). Muestra solo los servicios donde ella

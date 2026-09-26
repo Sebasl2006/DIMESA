@@ -8,9 +8,15 @@ import { DeleteButton } from "../../DeleteButton";
 import { eliminarProducto } from "./actions";
 import * as s from "../../admin-styles";
 
+// Con cientos de productos, dibujarlos todos de golpe hacía la página de
+// ~800 KB y lenta de abrir. Se muestran de a poco; el buscador y el filtro
+// de marca siguen buscando en TODOS.
+const POR_PAGINA = 30;
+
 export function ProductosTable({ productos, marcas }: { productos: Producto[]; marcas: MarcaInfo[] }) {
   const [busqueda, setBusqueda] = useState("");
   const [marca, setMarca] = useState("");
+  const [limite, setLimite] = useState(POR_PAGINA);
   const marcaLabel = useMemo(() => Object.fromEntries(marcas.map((m) => [m.slug, m.nombre])), [marcas]);
 
   const filtrados = useMemo(() => {
@@ -28,14 +34,20 @@ export function ProductosTable({ productos, marcas }: { productos: Producto[]; m
         <input
           type="text"
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={(e) => {
+            setBusqueda(e.target.value);
+            setLimite(POR_PAGINA);
+          }}
           placeholder="Buscar producto por nombre..."
           className="admin-input"
           style={{ ...s.input, flex: 1, minWidth: "220px", margin: 0 }}
         />
         <select
           value={marca}
-          onChange={(e) => setMarca(e.target.value)}
+          onChange={(e) => {
+            setMarca(e.target.value);
+            setLimite(POR_PAGINA);
+          }}
           className="admin-input admin-select"
           style={{ ...s.input, width: "220px", margin: 0 }}
         >
@@ -65,7 +77,7 @@ export function ProductosTable({ productos, marcas }: { productos: Producto[]; m
             </tr>
           </thead>
           <tbody>
-            {filtrados.map((p) => (
+            {filtrados.slice(0, limite).map((p) => (
               <tr key={p.id}>
                 <td style={s.td}>
                   {p.imagen_url ? (
@@ -86,7 +98,7 @@ export function ProductosTable({ productos, marcas }: { productos: Producto[]; m
                 </td>
                 <td style={s.td}>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    <Link href={`/admin/productos/${p.id}/editar`} className="admin-btn-secondary" style={s.smallButton}>Editar</Link>
+                    <Link href={`/admin/productos/${p.id}/editar`} prefetch={false} className="admin-btn-secondary" style={s.smallButton}>Editar</Link>
                     <DeleteButton
                       action={eliminarProducto.bind(null, p.id)}
                       confirmText={`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`}
@@ -97,6 +109,17 @@ export function ProductosTable({ productos, marcas }: { productos: Producto[]; m
             ))}
           </tbody>
         </table>
+      )}
+
+      {filtrados.length > limite && (
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "18px" }}>
+          <button type="button" onClick={() => setLimite((l) => l + POR_PAGINA)} className="admin-btn-secondary" style={s.secondaryButton}>
+            Mostrar {Math.min(POR_PAGINA, filtrados.length - limite)} más
+          </button>
+          <span style={{ color: "#8a8580", fontSize: "13px" }}>
+            Mostrando {limite} de {filtrados.length} productos
+          </span>
+        </div>
       )}
     </>
   );

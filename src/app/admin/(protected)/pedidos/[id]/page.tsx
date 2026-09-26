@@ -48,7 +48,7 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
 
   return (
     <div style={s.container}>
-      <Link href="/admin/pedidos" className="admin-btn-secondary" style={{ ...s.smallButton, marginBottom: "24px" }}>
+      <Link href="/admin/pedidos" prefetch={false} className="admin-btn-secondary" style={{ ...s.smallButton, marginBottom: "24px" }}>
         &larr; Volver a pedidos
       </Link>
 

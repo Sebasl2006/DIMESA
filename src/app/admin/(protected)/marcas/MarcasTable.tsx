@@ -32,10 +32,14 @@ export function MarcasTable({ marcas, conteoPorMarca }: { marcas: MarcaInfo[]; c
     setError("");
     startTransition(async () => {
       try {
-        await eliminarMarca(marca.slug, texto);
+        const resultado = await eliminarMarca(marca.slug, texto);
+        if (!resultado.ok) {
+          setError(resultado.error);
+          return;
+        }
         cerrar();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudo borrar la marca.");
+      } catch {
+        setError("No se pudo borrar la marca: falló la conexión con el servidor. Intenta de nuevo.");
       }
     });
   };

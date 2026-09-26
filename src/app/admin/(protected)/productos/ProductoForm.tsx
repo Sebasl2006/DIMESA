@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { MarcaInfo, Producto } from "@/lib/types";
+import type { ResultadoAccion } from "@/lib/resultado";
+import { prepararImagenesDelFormulario } from "@/lib/comprimir-imagen-cliente";
 import * as s from "../../admin-styles";
 
 interface ProductoFormProps {
   producto?: Producto;
   marcas: MarcaInfo[];
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<ResultadoAccion>;
 }
 
 export function ProductoForm({ producto, marcas, action }: ProductoFormProps) {
@@ -17,18 +19,31 @@ export function ProductoForm({ producto, marcas, action }: ProductoFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [marcaNueva, setMarcaNueva] = useState(false);
+  // Identificador de esta creación — evita que un reenvío duplique el producto.
+  // Se genera después de montar (no durante el render del servidor) para que
+  // no difiera entre servidor y navegador.
+  const [idNuevo, setIdNuevo] = useState("");
+  useEffect(() => {
+    if (!producto) setIdNuevo(crypto.randomUUID());
+  }, [producto]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
-      await action(new FormData(e.currentTarget));
+      const formData = new FormData(e.currentTarget);
+      await prepararImagenesDelFormulario(formData);
+      const resultado = await action(formData);
+      if (!resultado.ok) {
+        setSubmitting(false);
+        setError(resultado.error);
+        return;
+      }
       router.push("/admin/productos");
-      router.refresh();
-    } catch (err) {
+    } catch {
       setSubmitting(false);
-      setError(err instanceof Error ? err.message : "Ocurrió un error al guardar.");
+      setError("No se pudo guardar: falló la conexión con el servidor. Revisa tu internet e intenta de nuevo.");
     }
   };
 
@@ -37,6 +52,7 @@ export function ProductoForm({ producto, marcas, action }: ProductoFormProps) {
       {error && <div style={s.errorBox}>{error}</div>}
 
       <input type="hidden" name="imagen_url_actual" defaultValue={producto?.imagen_url ?? ""} />
+      {!producto && idNuevo && <input type="hidden" name="id" value={idNuevo} readOnly />}
 
       <label style={s.label}>Nombre</label>
       <input name="nombre" required defaultValue={producto?.nombre} className="admin-input" style={s.input} />

@@ -6,8 +6,16 @@ import type { Profesional } from "@/lib/types";
 import { ImageSlot } from "@/components/ImageSlot";
 import { FondoLayer } from "@/components/FondoLayer";
 
-// Igual que en /productos/[marca]: no se usa caché (ISR) aquí, y la
-// consulta + las tarjetas del equipo van en su propio componente con
+// Esta página se genera en CADA visita (no se guarda una copia). Lo que
+// muestra depende de lo que se cambia en el panel de administración (un
+// producto que se oculta, un precio...), y el servidor de Hostinger corre
+// varias copias del sitio a la vez, cada una con su propia memoria: una copia
+// guardada se ponía al día en una y seguía vieja en las otras, así que quien
+// recargaba la tienda veía el producto oculto aparecer y desaparecer durante
+// casi un minuto. Sin copia guardada, todos ven siempre lo último.
+export const dynamic = "force-dynamic";
+
+// La consulta + las tarjetas del equipo van en su propio componente con
 // Suspense, para que el encabezado se vea de inmediato y las fotos no
 // queden esperando a que esta consulta termine.
 async function EquipoGrid() {

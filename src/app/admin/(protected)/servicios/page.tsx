@@ -25,7 +25,7 @@ export default async function ServiciosAdminPage() {
     <div style={s.container}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
         <h1 style={{ ...s.h1, margin: 0 }}>Servicios</h1>
-        <Link href="/admin/servicios/nuevo" className="admin-btn-primary" style={s.primaryButton}>+ Agregar servicio</Link>
+        <Link href="/admin/servicios/nuevo" prefetch={false} className="admin-btn-primary" style={s.primaryButton}>+ Agregar servicio</Link>
       </div>
 
       <div style={s.card}>
@@ -68,7 +68,7 @@ export default async function ServiciosAdminPage() {
                   </td>
                   <td style={s.td}>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <Link href={`/admin/servicios/${sv.id}/editar`} className="admin-btn-secondary" style={s.smallButton}>Editar</Link>
+                      <Link href={`/admin/servicios/${sv.id}/editar`} prefetch={false} className="admin-btn-secondary" style={s.smallButton}>Editar</Link>
                       <DeleteButton
                         action={eliminarServicio.bind(null, sv.id)}
                         confirmText={`¿Eliminar "${sv.nombre}"? Esta acción no se puede deshacer.`}

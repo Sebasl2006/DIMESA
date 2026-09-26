@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Profesional } from "@/lib/types";
+import type { ResultadoAccion } from "@/lib/resultado";
 import { partirBio } from "@/lib/bio";
+import { prepararImagenesDelFormulario } from "@/lib/comprimir-imagen-cliente";
 import * as s from "../../admin-styles";
 
 interface ProfesionalFormProps {
   profesional?: Profesional;
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<ResultadoAccion>;
 }
 
 export function ProfesionalForm({ profesional, action }: ProfesionalFormProps) {
@@ -17,18 +19,29 @@ export function ProfesionalForm({ profesional, action }: ProfesionalFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const { texto: bioTexto, frase: bioFrase } = partirBio(profesional?.bio ?? "");
+  // Identificador de esta creación — evita que un reenvío duplique a la profesional.
+  const [idNuevo, setIdNuevo] = useState("");
+  useEffect(() => {
+    if (!profesional) setIdNuevo(crypto.randomUUID());
+  }, [profesional]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
-      await action(new FormData(e.currentTarget));
+      const formData = new FormData(e.currentTarget);
+      await prepararImagenesDelFormulario(formData);
+      const resultado = await action(formData);
+      if (!resultado.ok) {
+        setSubmitting(false);
+        setError(resultado.error);
+        return;
+      }
       router.push("/admin/profesionales");
-      router.refresh();
-    } catch (err) {
+    } catch {
       setSubmitting(false);
-      setError(err instanceof Error ? err.message : "Ocurrió un error al guardar.");
+      setError("No se pudo guardar: falló la conexión con el servidor. Revisa tu internet e intenta de nuevo.");
     }
   };
 
@@ -37,6 +50,7 @@ export function ProfesionalForm({ profesional, action }: ProfesionalFormProps) {
       {error && <div style={s.errorBox}>{error}</div>}
 
       <input type="hidden" name="foto_url_actual" defaultValue={profesional?.foto_url ?? ""} />
+      {!profesional && idNuevo && <input type="hidden" name="id" value={idNuevo} readOnly />}
 
       <label style={s.label}>Nombre</label>
       <input name="nombre" required defaultValue={profesional?.nombre} className="admin-input" style={s.input} />

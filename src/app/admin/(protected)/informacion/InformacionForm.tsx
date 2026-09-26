@@ -3,11 +3,13 @@
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import type { CuentaBancaria, Informacion } from "@/lib/types";
+import type { ResultadoAccion } from "@/lib/resultado";
+import { prepararImagenesDelFormulario } from "@/lib/comprimir-imagen-cliente";
 import * as s from "../../admin-styles";
 
 interface InformacionFormProps {
   informacion: Informacion;
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<ResultadoAccion>;
 }
 
 const CUENTA_VACIA: CuentaBancaria = { banco: "", tipo_cuenta: "", numero_cuenta: "", identificacion: "" };
@@ -34,10 +36,15 @@ export function InformacionForm({ informacion, action }: InformacionFormProps) {
       const formData = new FormData(e.currentTarget);
       const cuentasValidas = cuentas.filter((c) => c.banco.trim() && c.numero_cuenta.trim());
       formData.set("cuentas_bancarias", JSON.stringify(cuentasValidas));
-      await action(formData);
+      await prepararImagenesDelFormulario(formData);
+      const resultado = await action(formData);
+      if (!resultado.ok) {
+        setError(resultado.error);
+        return;
+      }
       setSaved(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ocurrió un error al guardar.");
+    } catch {
+      setError("No se pudo guardar: falló la conexión con el servidor. Revisa tu internet e intenta de nuevo.");
     } finally {
       setSubmitting(false);
     }
