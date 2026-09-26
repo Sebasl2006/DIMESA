@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCart } from "./CartContext";
 import { ImageSlot } from "@/components/ImageSlot";
+import { ENVIO_GRATIS_DESDE } from "@/lib/constants";
 
 const fmt = (n: number) => "$" + n.toFixed(2);
 
@@ -10,6 +11,9 @@ export function CartDrawer() {
   const router = useRouter();
   const { cartLines, cartCount, subtotal, drawerOpen, incQty, decQty, removeItem, clearCart, closeDrawer } = useCart();
   const hasItems = cartLines.length > 0;
+  const falta = Math.max(0, ENVIO_GRATIS_DESDE - subtotal);
+  const envioGratis = subtotal >= ENVIO_GRATIS_DESDE;
+  const progreso = Math.min(100, (subtotal / ENVIO_GRATIS_DESDE) * 100);
 
   return (
     <>
@@ -43,6 +47,16 @@ export function CartDrawer() {
             ✕
           </button>
         </div>
+        {hasItems && (
+          <div style={{ padding: "16px 28px 18px", borderBottom: "1px solid rgba(201,168,118,0.15)" }}>
+            <div style={{ fontFamily: "var(--font-montserrat), sans-serif", fontSize: "12px", letterSpacing: "0.04em", color: envioGratis ? "#c9a876" : "#e6d3ac", marginBottom: "10px", textAlign: "center" }}>
+              {envioGratis ? "¡Tienes envío gratis!" : `Te faltan ${fmt(falta)} para envío gratis`}
+            </div>
+            <div style={{ height: "6px", background: "rgba(201,168,118,0.15)", borderRadius: "3px", overflow: "hidden" }}>
+              <div style={{ width: `${progreso}%`, height: "100%", background: "#c9a876", borderRadius: "3px", transition: "width .35s ease" }} />
+            </div>
+          </div>
+        )}
         <div style={{ flex: 1, overflowY: "auto", padding: "8px 28px" }}>
           {hasItems ? (
             cartLines.map((line) => (

@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { requerido } from "@/lib/validation";
-import { CARGO_ENVIO_DOMICILIO } from "@/lib/constants";
+import { cargoDeEnvio } from "@/lib/constants";
 import { prepararPagoPayphone, confirmarPagoPayphone } from "@/lib/payphone";
 import type { LineaPedido } from "@/lib/types";
 
@@ -74,8 +74,11 @@ async function verificarYCalcular(input: DatosPedidoInput) {
 
   // El cargo de envío a domicilio se decide aquí, nunca con un valor que
   // mande el navegador — así nadie puede quitárselo manipulando la petición.
-  const cargoEnvio = input.entrega === "domicilio" ? CARGO_ENVIO_DOMICILIO : 0;
-  const total = lineasVerificadas.reduce((sum, l) => sum + l.precio * l.cantidad, 0) + cargoEnvio;
+  // El envío es gratis desde cierto monto: se calcula con los precios reales
+  // de la base de datos, no con los que diga el navegador.
+  const subtotalReal = lineasVerificadas.reduce((sum, l) => sum + l.precio * l.cantidad, 0);
+  const cargoEnvio = cargoDeEnvio(subtotalReal, input.entrega === "domicilio");
+  const total = subtotalReal + cargoEnvio;
   if (!Number.isFinite(total) || total <= 0) {
     throw new Error("El total del pedido no es válido.");
   }

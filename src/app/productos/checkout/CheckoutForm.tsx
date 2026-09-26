@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCart } from "../CartContext";
 import { ImageSlot } from "@/components/ImageSlot";
 import { crearPedido, iniciarPagoTarjeta } from "./actions";
-import { CARGO_ENVIO_DOMICILIO } from "@/lib/constants";
+import { cargoDeEnvio } from "@/lib/constants";
 import type { CuentaBancaria } from "@/lib/types";
 
 const fmt = (n: number) => "$" + n.toFixed(2);
@@ -75,7 +75,7 @@ export function CheckoutForm({ direccionLocal, cuentasBancarias = [] }: Checkout
   const [formError, setFormError] = useState("");
 
   const isDomicilio = form.entrega === "domicilio";
-  const cargoEnvio = isDomicilio ? CARGO_ENVIO_DOMICILIO : 0;
+  const cargoEnvio = cargoDeEnvio(subtotal, isDomicilio);
   const totalConEnvio = subtotal + cargoEnvio;
   const esTransferencia = pago === "transferencia";
   const setField = (field: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -233,7 +233,7 @@ export function CheckoutForm({ direccionLocal, cuentasBancarias = [] }: Checkout
               {isDomicilio && (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "14px 0 0", fontFamily: "var(--font-montserrat), sans-serif", fontSize: "13px", color: "#5c5347" }}>
                   <div>Envío a domicilio</div>
-                  <div>{fmt(cargoEnvio)}</div>
+                  <div>{cargoEnvio === 0 ? "Gratis" : fmt(cargoEnvio)}</div>
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", padding: "20px 0 0", fontFamily: "var(--font-montserrat), sans-serif", fontSize: "14px", letterSpacing: "0.06em", color: "#3d2f1a" }}>
