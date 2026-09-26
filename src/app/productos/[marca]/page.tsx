@@ -20,11 +20,11 @@ const MARCA_VIDEO: Partial<Record<string, string>> = {
 // Imagen de portada de cada video — se ve de inmediato mientras el video
 // carga/decodifica, evitando la pantalla negra en conexiones lentas.
 const MARCA_VIDEO_POSTER: Partial<Record<string, string>> = {
-  botanique: "/images/botanique-hero-poster.jpg",
-  revlon: "/images/revlon-hero-poster.jpg",
-  olaplex: "/images/olaplex-hero-poster.jpg",
-  truss: "/images/truss-hero-poster.jpg",
-  mq_professional: "/images/mq-hero-poster.jpg",
+  botanique: "/images/botanique-hero-poster-v2.jpg",
+  revlon: "/images/revlon-hero-poster-v2.jpg",
+  olaplex: "/images/olaplex-hero-poster-v2.jpg",
+  truss: "/images/truss-hero-poster-v2.jpg",
+  mq_professional: "/images/mq-hero-poster-v2.jpg",
 };
 
 // Texto superpuesto sobre el video (título + descripción de producto).
