@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, precioValido, imagenValida, slugificar } from "@/lib/validation";
 import { borrarImagenStorage, borrarImagenesStorage } from "@/lib/storage";
@@ -117,7 +118,7 @@ function leerCampos(formData: FormData) {
 }
 
 export async function crearProducto(formData: FormData): Promise<ResultadoAccion> {
-  return conManejoDeErrores(async () => {
+  const resultado = await conManejoDeErrores(async () => {
     const supabase = await createClient();
     await requireAdmin(supabase);
 
@@ -150,10 +151,15 @@ export async function crearProducto(formData: FormData): Promise<ResultadoAccion
     revalidatePath("/admin/productos");
     refrescarSitioPublico();
   });
+  // El servidor mismo lleva a la lista en esta misma respuesta: antes el formulario
+  // pedía la navegación aparte (router.push) y Next.js la convertía en una recarga
+  // completa de la página, sumando varios segundos a cada guardado.
+  if (resultado.ok) redirect("/admin/productos");
+  return resultado;
 }
 
 export async function actualizarProducto(id: string, formData: FormData): Promise<ResultadoAccion> {
-  return conManejoDeErrores(async () => {
+  const resultado = await conManejoDeErrores(async () => {
     const supabase = await createClient();
     await requireAdmin(supabase);
     const marca = await resolverMarca(supabase, formData);
@@ -184,6 +190,11 @@ export async function actualizarProducto(id: string, formData: FormData): Promis
     revalidatePath("/admin/productos");
     refrescarSitioPublico();
   });
+  // El servidor mismo lleva a la lista en esta misma respuesta: antes el formulario
+  // pedía la navegación aparte (router.push) y Next.js la convertía en una recarga
+  // completa de la página, sumando varios segundos a cada guardado.
+  if (resultado.ok) redirect("/admin/productos");
+  return resultado;
 }
 
 export async function eliminarProducto(id: string): Promise<ResultadoAccion> {

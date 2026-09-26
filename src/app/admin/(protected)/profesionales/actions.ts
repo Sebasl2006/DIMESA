@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, imagenValida } from "@/lib/validation";
 import { unirBio } from "@/lib/bio";
@@ -37,7 +38,7 @@ function leerCampos(formData: FormData) {
 }
 
 export async function crearProfesional(formData: FormData): Promise<ResultadoAccion> {
-  return conManejoDeErrores(async () => {
+  const resultado = await conManejoDeErrores(async () => {
     const supabase = await createClient();
     await requireAdmin(supabase);
 
@@ -64,10 +65,15 @@ export async function crearProfesional(formData: FormData): Promise<ResultadoAcc
     revalidatePath("/admin/profesionales");
     refrescarSitioPublico();
   });
+  // El servidor mismo lleva a la lista en esta misma respuesta: antes el formulario
+  // pedía la navegación aparte (router.push) y Next.js la convertía en una recarga
+  // completa de la página, sumando varios segundos a cada guardado.
+  if (resultado.ok) redirect("/admin/profesionales");
+  return resultado;
 }
 
 export async function actualizarProfesional(id: string, formData: FormData): Promise<ResultadoAccion> {
-  return conManejoDeErrores(async () => {
+  const resultado = await conManejoDeErrores(async () => {
     const supabase = await createClient();
     await requireAdmin(supabase);
     const campos = leerCampos(formData);
@@ -95,6 +101,11 @@ export async function actualizarProfesional(id: string, formData: FormData): Pro
     revalidatePath("/admin/profesionales");
     refrescarSitioPublico();
   });
+  // El servidor mismo lleva a la lista en esta misma respuesta: antes el formulario
+  // pedía la navegación aparte (router.push) y Next.js la convertía en una recarga
+  // completa de la página, sumando varios segundos a cada guardado.
+  if (resultado.ok) redirect("/admin/profesionales");
+  return resultado;
 }
 
 export async function eliminarProfesional(id: string): Promise<ResultadoAccion> {

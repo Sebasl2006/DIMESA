@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient, requireAdmin } from "@/lib/supabase/server";
 import { requerido, precioValido, enumValido, imagenValida } from "@/lib/validation";
 import { borrarImagenStorage } from "@/lib/storage";
@@ -50,7 +51,7 @@ async function idsProfesionalesElegidos(
 }
 
 export async function crearServicio(formData: FormData): Promise<ResultadoAccion> {
-  return conManejoDeErrores(async () => {
+  const resultado = await conManejoDeErrores(async () => {
     const supabase = await createClient();
     await requireAdmin(supabase);
 
@@ -78,10 +79,15 @@ export async function crearServicio(formData: FormData): Promise<ResultadoAccion
     revalidatePath("/admin/servicios");
     refrescarSitioPublico();
   });
+  // El servidor mismo lleva a la lista en esta misma respuesta: antes el formulario
+  // pedía la navegación aparte (router.push) y Next.js la convertía en una recarga
+  // completa de la página, sumando varios segundos a cada guardado.
+  if (resultado.ok) redirect("/admin/servicios");
+  return resultado;
 }
 
 export async function actualizarServicio(id: string, formData: FormData): Promise<ResultadoAccion> {
-  return conManejoDeErrores(async () => {
+  const resultado = await conManejoDeErrores(async () => {
     const supabase = await createClient();
     await requireAdmin(supabase);
     const campos = leerCampos(formData);
@@ -110,6 +116,11 @@ export async function actualizarServicio(id: string, formData: FormData): Promis
     revalidatePath("/admin/servicios");
     refrescarSitioPublico();
   });
+  // El servidor mismo lleva a la lista en esta misma respuesta: antes el formulario
+  // pedía la navegación aparte (router.push) y Next.js la convertía en una recarga
+  // completa de la página, sumando varios segundos a cada guardado.
+  if (resultado.ok) redirect("/admin/servicios");
+  return resultado;
 }
 
 export async function eliminarServicio(id: string): Promise<ResultadoAccion> {

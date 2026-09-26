@@ -34,13 +34,13 @@ export function ProductoForm({ producto, marcas, action }: ProductoFormProps) {
     try {
       const formData = new FormData(e.currentTarget);
       await prepararImagenesDelFormulario(formData);
+      // Si se guardó, el servidor mismo lleva a la lista (redirect) y este
+      // formulario desaparece; solo hay algo que hacer aquí si falló.
       const resultado = await action(formData);
-      if (!resultado.ok) {
+      if (resultado && !resultado.ok) {
         setSubmitting(false);
         setError(resultado.error);
-        return;
       }
-      router.push("/admin/productos");
     } catch {
       setSubmitting(false);
       setError("No se pudo guardar: falló la conexión con el servidor. Revisa tu internet e intenta de nuevo.");
