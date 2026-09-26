@@ -25,7 +25,7 @@
 -- Lista única de correos admin — se reutiliza en todas las políticas.
 -- auth.jwt() ->> 'email' devuelve el correo del usuario que hace la
 -- petición; ANY(ARRAY[...]) compara contra la lista.
--- Correos actuales: dueño (2006sacura@gmail.com) + cliente (daos1020@gmail.com).
+-- Correos actuales: dueño (2006sacura@gmail.com) + cliente (daos1020@gmail.com) + Oswaldo Medina (oswaldomedina08@yahoo.com).
 
 -- ── productos ────────────────────────────────────────────────────
 drop policy if exists "Admin ve todos los productos" on productos;
@@ -34,15 +34,15 @@ drop policy if exists "Admin actualiza productos" on productos;
 drop policy if exists "Admin elimina productos" on productos;
 
 create policy "Admin ve todos los productos" on productos for select
-  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin crea productos" on productos for insert
-  to authenticated with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin actualiza productos" on productos for update
   to authenticated
-  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']))
-  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']))
+  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin elimina productos" on productos for delete
-  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 
 -- ── servicios ────────────────────────────────────────────────────
 drop policy if exists "Admin crea servicios" on servicios;
@@ -50,13 +50,13 @@ drop policy if exists "Admin actualiza servicios" on servicios;
 drop policy if exists "Admin elimina servicios" on servicios;
 
 create policy "Admin crea servicios" on servicios for insert
-  to authenticated with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin actualiza servicios" on servicios for update
   to authenticated
-  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']))
-  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']))
+  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin elimina servicios" on servicios for delete
-  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 
 -- ── profesionales ────────────────────────────────────────────────
 drop policy if exists "Admin crea profesionales" on profesionales;
@@ -64,21 +64,21 @@ drop policy if exists "Admin actualiza profesionales" on profesionales;
 drop policy if exists "Admin elimina profesionales" on profesionales;
 
 create policy "Admin crea profesionales" on profesionales for insert
-  to authenticated with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin actualiza profesionales" on profesionales for update
   to authenticated
-  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']))
-  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']))
+  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin elimina profesionales" on profesionales for delete
-  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 
 -- ── informacion ──────────────────────────────────────────────────
 drop policy if exists "Admin actualiza información" on informacion;
 
 create policy "Admin actualiza información" on informacion for update
   to authenticated
-  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']))
-  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']))
+  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 
 -- ── pedidos (el admin los lee/gestiona desde el panel) ──────────
 drop policy if exists "Admin ve pedidos" on pedidos;
@@ -86,13 +86,13 @@ drop policy if exists "Admin actualiza pedidos" on pedidos;
 drop policy if exists "Admin elimina pedidos" on pedidos;
 
 create policy "Admin ve pedidos" on pedidos for select
-  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin actualiza pedidos" on pedidos for update
   to authenticated
-  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']))
-  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']))
+  with check ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin elimina pedidos" on pedidos for delete
-  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  to authenticated using ((auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 
 -- ── storage: fotos de productos/servicios/profesionales ─────────
 drop policy if exists "Admin sube fotos" on storage.objects;
@@ -101,11 +101,11 @@ drop policy if exists "Admin borra fotos" on storage.objects;
 
 create policy "Admin sube fotos" on storage.objects for insert
   to authenticated
-  with check (bucket_id = 'dimesa' and (auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  with check (bucket_id = 'dimesa' and (auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin reemplaza fotos" on storage.objects for update
   to authenticated
-  using (bucket_id = 'dimesa' and (auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']))
-  with check (bucket_id = 'dimesa' and (auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  using (bucket_id = 'dimesa' and (auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']))
+  with check (bucket_id = 'dimesa' and (auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
 create policy "Admin borra fotos" on storage.objects for delete
   to authenticated
-  using (bucket_id = 'dimesa' and (auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com']));
+  using (bucket_id = 'dimesa' and (auth.jwt() ->> 'email') = any (array['2006sacura@gmail.com', 'daos1020@gmail.com', 'oswaldomedina08@yahoo.com']));
