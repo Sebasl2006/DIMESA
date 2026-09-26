@@ -63,6 +63,8 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     const video = videoRef.current;
     if (video && video.paused) {
       video.muted = true;
+      video.defaultMuted = true;
+      video.setAttribute("muted", "");
       const promesa = video.play();
       // Se revela solo si el navegador de verdad rechaza el play() — antes
       // se revisaba "video.paused" a los 400ms, y como play() tarda un
@@ -108,6 +110,8 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     // mano) — probamos reactivarlo apenas arranca, pero en varios
     // navegadores eso mismo lo vuelve a pausar, así que no vale el riesgo.
     video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute("muted", "");
 
     // Intentar play() apenas se monta no siempre "prende" si el video
     // todavía no cargó nada — en vez de confiar en un solo intento, se
@@ -224,8 +228,7 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
             height: "42px",
             borderRadius: "50%",
             border: "1px solid rgba(201,168,118,0.4)",
-            background: "rgba(11,10,9,0.55)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(11,10,9,0.72)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

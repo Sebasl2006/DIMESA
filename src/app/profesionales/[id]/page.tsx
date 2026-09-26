@@ -57,7 +57,6 @@ export default async function ProfesionalDetallePage({ params }: { params: Promi
             right: 0,
             height: "76px",
             background: "rgba(11,10,9,0.94)",
-            backdropFilter: "blur(6px)",
             borderBottom: "1px solid rgba(201,168,118,0.22)",
             display: "flex",
             alignItems: "center",

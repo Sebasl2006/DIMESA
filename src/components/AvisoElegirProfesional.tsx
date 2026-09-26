@@ -70,7 +70,6 @@ export function AvisoElegirProfesional() {
           animation: "dimesa-aviso-entrada 0.5s ease both",
           width: "100%",
           background: "rgba(20,18,16,0.97)",
-          backdropFilter: "blur(6px)",
           border: "1px solid rgba(201,168,118,0.35)",
           borderRadius: "12px",
           boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
