@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Profesional, Servicio } from "@/lib/types";
@@ -17,6 +17,18 @@ interface ServicioFormProps {
 export function ServicioForm({ servicio, profesionales, action }: ServicioFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const recargando = useRef(false);
+  useEffect(() => {
+    const marcar = () => {
+      recargando.current = true;
+    };
+    window.addEventListener("beforeunload", marcar);
+    window.addEventListener("pagehide", marcar);
+    return () => {
+      window.removeEventListener("beforeunload", marcar);
+      window.removeEventListener("pagehide", marcar);
+    };
+  }, []);
   const [error, setError] = useState("");
   // Identificador de esta creación — evita que un reenvío duplique el servicio.
   const [idNuevo, setIdNuevo] = useState("");
@@ -39,8 +51,13 @@ export function ServicioForm({ servicio, profesionales, action }: ServicioFormPr
         setError(resultado.error);
       }
     } catch {
+      // Si la página se está recargando (el guardado terminó y el navegador
+      // ya está yendo a la lista), la petición se corta y llegamos aquí: eso
+      // NO es un error, así que se espera un momento antes de decir nada.
+      await new Promise((r) => setTimeout(r, 2500));
+      if (recargando.current) return;
       setSubmitting(false);
-      setError("No se pudo guardar: falló la conexión con el servidor. Revisa tu internet e intenta de nuevo.");
+      setError("No llegó la respuesta del servidor. Es posible que el cambio SÍ se haya guardado: revisa la lista antes de volver a intentar.");
     }
   };
 

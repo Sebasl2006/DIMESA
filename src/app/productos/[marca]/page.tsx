@@ -64,21 +64,23 @@ export const dynamic = "force-dynamic";
 
 // La lista de productos va aparte (con Suspense más abajo) para que el video
 // de la marca se mande de inmediato: la consulta de un catálogo grande (ej.
-// Revlon, +130 productos) no debe hacerlo esperar.
-async function ListaDeProductos({ marca }: { marca: string }) {
-  const supabase = createPublicClient();
-  const { data: productos } = await supabase
-    .from("productos")
-    .select("*")
-    .eq("marca", marca)
-    .eq("disponible", true)
-    .order("created_at", { ascending: false });
+// Revlon, +130 productos) no debe hacerlo esperar. La consulta arranca a la
+// vez que la de la marca (no después), y aquí solo se espera su resultado.
+async function ListaDeProductos({ consulta }: { consulta: PromiseLike<{ data: unknown[] | null }> }) {
+  const { data: productos } = await consulta;
   return <ProductGrid productos={(productos ?? []) as Producto[]} />;
 }
 
 export default async function MarcaPage({ params }: { params: Promise<{ marca: string }> }) {
   const { marca } = await params;
   const supabase = createPublicClient();
+  const consultaProductos = supabase
+    .from("productos")
+    .select("*")
+    .eq("marca", marca)
+    .eq("disponible", true)
+    .order("created_at", { ascending: false })
+    .then((r) => r);
   const { data: marcaInfo } = await supabase.from("marcas").select("nombre").eq("slug", marca).maybeSingle();
   if (!marcaInfo) notFound();
   const label = marcaInfo.nombre;
@@ -130,7 +132,7 @@ export default async function MarcaPage({ params }: { params: Promise<{ marca: s
       </div>
 
       <Suspense fallback={null}>
-        <ListaDeProductos marca={marca} />
+        <ListaDeProductos consulta={consultaProductos} />
       </Suspense>
 
       <div style={{ textAlign: "center", padding: "0 24px 90px" }}>

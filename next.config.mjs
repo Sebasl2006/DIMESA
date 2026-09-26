@@ -27,6 +27,17 @@ const nextConfig = {
     // lista (default: solo 75). Las fotos de producto necesitan más para
     // que se lea el texto de la etiqueta — ver ImageSlot.tsx.
     qualities: [75, 90, 100],
+    // Next.js reduce cada foto al tamaño pedido "al vuelo" (trabajo de CPU en
+    // el servidor) y, por defecto, da esa copia por vencida a los 60 segundos:
+    // con catálogos de 100+ fotos, el servidor pasaba el día volviendo a
+    // reducir las mismas imágenes. Las fotos de productos son inmutables (cada
+    // subida lleva un nombre nuevo), así que se guardan un año — el servidor
+    // las reduce una sola vez y el navegador de cada cliente las recuerda.
+    minimumCacheTTL: 31536000,
+    // Menos tamaños intermedios = menos versiones distintas que preparar por
+    // foto (la lista por defecto llega hasta 3840 px, más grande que cualquier
+    // foto que se sube: se reducen a 1600 px).
+    deviceSizes: [640, 828, 1080, 1600, 1920],
   },
   // Cabeceras de seguridad — Next.js no las manda por defecto. Van en todas
   // las rutas porque hay páginas sensibles (login de admin, checkout con

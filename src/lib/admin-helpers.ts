@@ -11,13 +11,16 @@ export function exigirFilasAfectadas(filas: unknown[] | null | undefined, mensaj
   if (!filas || filas.length === 0) throw new Error(mensaje);
 }
 
-// Marca como vencido todo lo que el sitio tiene guardado, para que el
-// próximo visitante vea los cambios hechos en el panel. Las páginas públicas
-// que dependen de datos del panel ya se generan en cada visita (ver
-// "dynamic" en cada una), así que esto es solo una red de seguridad para las
-// pocas páginas que sí se guardan (como la portada).
+// Las páginas públicas que dependen del panel (productos, profesionales,
+// servicios, información, fondo) ya se generan en CADA visita, así que no hay
+// copia guardada que invalidar. Antes esto era revalidatePath("/", "layout"):
+// invalidar TODO obligaba al servidor a rehacer también la pantalla del panel
+// donde se estaba, y en el hosting real eso hacía que el navegador se
+// recargara por completo justo cuando terminaba de guardar — la petición se
+// cortaba y salía un error rojo falso ("no se pudo guardar") aunque el cambio
+// sí estaba guardado. Solo la portada es estática, y no depende de estos datos.
 export function refrescarSitioPublico(): void {
-  revalidatePath("/", "layout");
+  revalidatePath("/");
 }
 
 // Ejecuta el cuerpo de una acción y convierte cualquier error en un valor
