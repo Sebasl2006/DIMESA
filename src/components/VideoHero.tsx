@@ -31,6 +31,12 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
   // intenta activar el sonido solo — si el navegador de todos modos lo
   // bloquea, se queda callado y el botón permite reactivarlo a mano.
   const [muted, setMuted] = useState(true);
+  // El video solo se ve cuando YA está reproduciendo de verdad (evento
+  // "playing"). Mientras tanto se ve la imagen de portada, puesta como <img>
+  // debajo: en varios celulares/tablets el <video> pinta negro (y esconde su
+  // propio "poster") hasta que decodifica el primer cuadro — o para siempre
+  // si la conexión se atasca. Así nunca se ve una pantalla negra.
+  const [reproduciendo, setReproduciendo] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -57,11 +63,15 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     const video = videoRef.current;
     if (video && video.paused) {
       video.muted = true;
-      video.play()?.catch(() => {});
+      const promesa = video.play();
+      // Se revela solo si el navegador de verdad rechaza el play() — antes
+      // se revisaba "video.paused" a los 400ms, y como play() tarda un
+      // momento en resolver, un toque que SÍ arrancaba el video igual lo
+      // cortaba y revelaba la página.
+      promesa?.catch(() => reveal());
+      return;
     }
-    window.setTimeout(() => {
-      if (!videoRef.current || videoRef.current.paused) reveal();
-    }, 400);
+    if (!video) reveal();
   };
 
   useEffect(() => {
@@ -76,6 +86,19 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     // mayoría de las veces. Además, cualquier toque en la pantalla (ver
     // handleTapHero) lo destraba al instante sin tener que esperar esto.
     const maxWaitTimer = setTimeout(reveal, 20000);
+    // Si a los 4s todavía no avanzó ni un cuadro, se reinicia la carga una
+    // vez (arregla el atasco típico de un primer intento que nunca arranca);
+    // si a los 9s sigue igual, se muestra la página sobre la imagen de
+    // portada en vez de dejar a la persona esperando.
+    const reintentoTimer = setTimeout(() => {
+      if (video.currentTime === 0) {
+        video.load();
+        video.play()?.catch(() => {});
+      }
+    }, 4000);
+    const sinArranqueTimer = setTimeout(() => {
+      if (video.currentTime === 0) reveal();
+    }, 9000);
 
     // Arrancar en silencio es lo único que los navegadores de celular
     // garantizan sin necesitar interacción previa — intentar arrancar CON
@@ -103,9 +126,12 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
       const promesa = video.play();
       if (promesa && typeof promesa.finally === "function") {
         promesa
-          .catch(() => {
-            // No arrancó todavía — se reintenta con el próximo evento, o
-            // como último recurso, revela la página el temporizador de arriba.
+          .catch((err) => {
+            // NotAllowedError: el navegador no deja arrancar el video solo
+            // (modo de bajo consumo, por ejemplo) — reintentar no sirve, así
+            // que se muestra la página sobre la portada. Cualquier otro
+            // rechazo se reintenta con el próximo evento.
+            if (err && err.name === "NotAllowedError") reveal();
           })
           .finally(() => {
             intentando = false;
@@ -118,9 +144,15 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
     video.addEventListener("loadeddata", intentarReproducir);
     video.addEventListener("canplay", intentarReproducir);
     video.addEventListener("canplaythrough", intentarReproducir);
+    const alReproducir = () => setReproduciendo(true);
+    video.addEventListener("playing", alReproducir);
+    if (!video.paused && video.currentTime > 0) setReproduciendo(true);
 
     return () => {
       clearTimeout(maxWaitTimer);
+      clearTimeout(reintentoTimer);
+      clearTimeout(sinArranqueTimer);
+      video.removeEventListener("playing", alReproducir);
       video.removeEventListener("loadeddata", intentarReproducir);
       video.removeEventListener("canplay", intentarReproducir);
       video.removeEventListener("canplaythrough", intentarReproducir);
@@ -146,11 +178,22 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
           background: "#0b0a09",
         }}
       >
+        {poster && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={poster}
+            alt=""
+            fetchPriority="high"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
+          />
+        )}
         <video
           ref={videoRef}
           src={src}
-          poster={poster}
-          autoPlay
+          // Sin "autoPlay": React no escribe el atributo "muted" en el HTML
+          // del servidor, y un autoplay sin silenciar lo bloquean los
+          // navegadores antes de que el código pueda silenciarlo. El efecto
+          // de arriba silencia primero y luego llama a play().
           muted
           playsInline
           preload="auto"
@@ -163,6 +206,8 @@ export function VideoHero({ src, poster, overlay, cornerLogo, children }: VideoH
             height: "100%",
             objectFit: "cover",
             zIndex: 0,
+            opacity: reproduciendo ? 1 : 0,
+            transition: "opacity .25s ease",
           }}
         />
 

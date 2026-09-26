@@ -51,6 +51,14 @@ export function LandingClient() {
   // fade-in temprano en vez de depender de "revealed".
   const [buttonVisible, setButtonVisible] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  // El video solo se ve cuando ya está reproduciendo de verdad; mientras
+  // tanto se ve la imagen de portada (un <video> que aún no decodifica pinta
+  // negro en varios celulares/tablets, y esconde su propio "poster").
+  const [reproduciendo, setReproduciendo] = useState(false);
+  // El navegador no dejó arrancar el video solo (ej. tablet en modo de bajo
+  // consumo): se muestra el menú sobre la portada y un toque lo reproduce.
+  const [bloqueado, setBloqueado] = useState(false);
+  const bloqueadoRef = useRef(false);
   // En desarrollo, React ejecuta cada efecto dos veces seguidas al montar
   // (para ayudar a encontrar bugs) — sin este freno, la primera pasada
   // marca sessionStorage como "vista" y la segunda pasada (inmediata) lee
@@ -81,15 +89,16 @@ export function LandingClient() {
   // aun así el video no arranca, igual se revela el menú: mejor dejar
   // pasar a la persona que dejarla tocando la pantalla sin que pase nada.
   const handleTapHero = () => {
-    if (revealed) return;
     const video = videoRef.current;
-    if (video && video.paused) {
+    if (video && video.paused && !video.ended) {
       video.muted = true;
-      video.play()?.catch(() => {});
+      // Solo se salta la intro si el navegador de verdad rechaza el play()
+      // — antes se revisaba "video.paused" a los 400ms, y como play() tarda
+      // un momento, un toque que SÍ arrancaba el video igual lo cortaba.
+      video.play()?.then(() => setBloqueado(false)).catch(() => saltarIntro());
+      return;
     }
-    window.setTimeout(() => {
-      if (!videoRef.current || videoRef.current.paused) saltarIntro();
-    }, 400);
+    if (!revealed && !video) setRevealed(true);
   };
 
   useEffect(() => {
@@ -140,8 +149,16 @@ export function LandingClient() {
     // Además, cualquier toque en la pantalla (ver handleTapHero) lo
     // destraba al instante sin tener que esperar esto.
     const arranqueTimer = setTimeout(() => {
-      if (video.currentTime === 0) saltarIntro();
-    }, 8000);
+      if (video.currentTime === 0) {
+        // Primero se reinicia la carga una vez (el atasco típico de un
+        // primer intento que nunca arranca); si tampoco así, se salta.
+        video.load();
+        video.play()?.catch(() => {});
+      }
+    }, 4500);
+    const salto2Timer = setTimeout(() => {
+      if (video.currentTime === 0 && !bloqueadoRef.current) saltarIntro();
+    }, 10000);
     const maxWaitTimer = setTimeout(saltarIntro, 20000);
 
     // Arrancar en silencio es lo único que los navegadores garantizan sin
@@ -163,9 +180,19 @@ export function LandingClient() {
         // se pasa directo al menú en vez de dejar la pantalla congelada.
         // Cualquier otro rechazo (ej. todavía cargando) se reintenta con el
         // próximo evento, o lo cubren los temporizadores de arriba.
-        if (err && err.name === "NotAllowedError") saltarIntro();
+        if (err && err.name === "NotAllowedError") {
+          bloqueadoRef.current = true;
+          setBloqueado(true);
+          setRevealed(true);
+        }
       });
     };
+    const alReproducir = () => {
+      setReproduciendo(true);
+      setBloqueado(false);
+      bloqueadoRef.current = false;
+    };
+    video.addEventListener("playing", alReproducir);
     intentarReproducir();
     video.addEventListener("loadeddata", intentarReproducir);
     video.addEventListener("canplay", intentarReproducir);
@@ -173,7 +200,9 @@ export function LandingClient() {
 
     return () => {
       clearTimeout(arranqueTimer);
+      clearTimeout(salto2Timer);
       clearTimeout(maxWaitTimer);
+      video.removeEventListener("playing", alReproducir);
       video.removeEventListener("loadeddata", intentarReproducir);
       video.removeEventListener("canplay", intentarReproducir);
       video.removeEventListener("canplaythrough", intentarReproducir);
@@ -242,10 +271,18 @@ export function LandingClient() {
         />
 
         {mostrarVideo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/images/dimesa-hero-poster.jpg"
+            alt=""
+            fetchPriority="high"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
+          />
+        )}
+        {mostrarVideo && (
           <video
             ref={videoRef}
             src="/videos/dimesa-hero.mp4"
-            poster="/images/dimesa-hero-poster.jpg"
             autoPlay
             muted
             playsInline
@@ -259,8 +296,27 @@ export function LandingClient() {
               height: "100%",
               objectFit: "cover",
               zIndex: 0,
+              opacity: reproduciendo ? 1 : 0,
+              transition: "opacity .25s ease",
             }}
           />
+        )}
+        {mostrarVideo && bloqueado && (
+          <div
+            style={{
+              position: "absolute",
+              top: "24px",
+              left: "24px",
+              zIndex: 4,
+              fontFamily: "var(--font-montserrat), sans-serif",
+              fontSize: "11px",
+              letterSpacing: "0.18em",
+              color: "#e6d3ac",
+              pointerEvents: "none",
+            }}
+          >
+            TOCA LA PANTALLA PARA VER EL VIDEO
+          </div>
         )}
 
         <button
